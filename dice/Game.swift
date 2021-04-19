@@ -95,7 +95,7 @@ class Game {
     var throwOption : [TapOptions] {
         get {return tapOpt
         }
-        set (value) {tapOpt = value}
+        set (value) {if tapOpt != value {tapOpt = value}}
     }
     var sound: Bool {
         get { return soundOn }

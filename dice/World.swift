@@ -95,29 +95,33 @@ class World: SCNScene, SCNPhysicsContactDelegate {
     var pulsing: Bool {
         get { return pulse }
         set (value) {
-            pulse = value
-            holdColor()  // update any select/held dice
-            selectColor()
+            if pulse != value {
+                pulse = value
+                holdColor()  // update any select/held dice
+                selectColor()
+            }
         }
     }
     var numUndo : Int {  // set/get number of undos
         get { return nUndo }
         set (value) {
-            nUndo = value
-            if value == 0 {
-                throwResults.removeAll()
-                clearUnReDo()
-                whichUndo = 0
-            } else if value > 0 {
-                if throwResults.count > value + 1 {  // limited undo?
-                    for _ in 0..<(throwResults.count - value - 1) {
-                        throwResults[value+1].removeAll()
-                        throwResults.remove(at: value+1)
+            if value != nUndo {
+                nUndo = value
+                if value == 0 {
+                    throwResults.removeAll()
+                    clearUnReDo()
+                    whichUndo = 0
+                } else if value > 0 {
+                    if throwResults.count > value + 1 {  // limited undo?
+                        for _ in 0..<(throwResults.count - value - 1) {
+                            throwResults[value+1].removeAll()
+                            throwResults.remove(at: value+1)
+                        }
                     }
+                    if whichUndo > value {whichUndo = min(whichUndo,value)}
                 }
-                if whichUndo > value {whichUndo = min(whichUndo,value)}
+                nUndo = value
             }
-            nUndo = value
         }
     }
     var undoButton: UIButton { // so we can turn it on/off

@@ -523,22 +523,11 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
             if let nDPS = settingView!.numDiePerSide() {
                 _world.numDiePerSide = nDPS
             }
-            if _game.throwOption != settingView!.throwOption() { // tapping die options changed
-                _game.throwOption = settingView!.throwOption()
-            }
-            if _world.numUndo != settingView!.numUndo() { // changed number of undo
-                _world.numUndo = settingView!.numUndo()
-            }
-            if _world.pulsing != settingView!.pulsing() { // changed pulsing
-                _world.pulsing = settingView!.pulsing()
-            }
-            if _game.energyThrow_ != settingView!.energy() { // changed throw energy
-                _game.energyThrow_ = settingView!.energy()
-                //print("new energy: \(_game.energyThrow_)")
-            }
-            if _world.launchType != settingView!.launch() {
-                _world.launchType = settingView!.launch()
-            }
+            _game.throwOption = settingView!.throwOption()
+            _world.numUndo = settingView!.numUndo()
+            _world.pulsing = settingView!.pulsing()
+            _game.energyThrow_ = settingView!.energy()
+            _world.launchType = settingView!.launch()
             settingView!.removeFromSuperview() // dismiss setting view
         }; settingView = nil
         if diceNumberView != nil { diceNumberView!.removeFromSuperview()}; diceNumberView = nil
