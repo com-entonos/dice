@@ -160,25 +160,29 @@ class Dice : SCNNode {
     }
     
     func randomVelocity(_ vOffset: SCNVector3) {
-        
+/*
         let m = Float(self.dieMass)             // impulse = delta p = m delta velocity
         let force = SCNVector3(x: (vOffset.x * (1 + Float.random(in: -0.1...0.1)))*m, y: (vOffset.y * (1 + Float.random(in: -0.1...0.1)))*m, z: (vOffset.z * (1 + Float.random(in: -0.1...0.1)))*m)
-//print(m,vOffset,force)
         self.physicsBody!.applyForce(force, asImpulse: true)
-        //self.physicsBody!.applyForce(SCNVector3Zero, asImpulse: true)  // turn off impluse
+ */
+        self.physicsBody!.velocity = SCNVector3(vOffset.x * (1 + Float.random(in: -0.1...0.1)),
+                                                vOffset.y * (1 + Float.random(in: -0.1...0.1)),
+                                                vOffset.z * (1 + Float.random(in: -0.1...0.1)))
     }
     
     func randomOmega(_ wOffset: Float) {
-    
-        let m = dieInertia  // +- moment of inertia, impluse = deta Iw = I delta w
+
         // create random point on sphere (unit torque vector)
         let cost = Float.random(in: -1.0...1.0)
         let sint = sqrt(max(0, 1 - cost * cost))
         let phi = Float.random(in: 0.0...(2*Float.pi))
         let n = self.simdOrientation.act(simd_float3(cos(phi)*sint, sin(phi)*sint, cost))
+/*
+        let m = dieInertia  // +- moment of inertia, impluse = deta Iw = I delta w
         let torque = SCNVector4(x: n.x * m.x, y: n.y * m.y, z: n.z * m.z, w: (wOffset * (1 + Float.random(in: -0.3...0.3))) * Float(Int.random(in: 0...1)*2-1))
-//print(m,wOffset,n,torque,self.physicsBody!.usesDefaultMomentOfInertia)
         self.physicsBody!.applyTorque(torque, asImpulse: true)
+ */
+        self.physicsBody!.angularVelocity = SCNVector4(n.x, n.y, n.z, wOffset * (1 + Float.random(in: -0.3...0.3)) * Float(Int.random(in: 0...1)*2-1))
     }
 
     override init() {
@@ -272,16 +276,16 @@ class Coin : Dice {  // coin, 2 sided die
     }
     override func randomOmega(_ wOffset: Float) {
         
-        let m = dieInertia  // +- moment of inertia, impluse = delta Iw = I delta w
         let phi = Float.random(in: 0.0...(2*Float.pi))
         
         // torque is applied in world coordinates, so transform from local to world
         let n = self.simdOrientation.inverse.act(float3(cos(phi), 0, sin(phi)))
-        //let n = float3(cos(phi), 0, sin(phi))
+/*
+        let m = dieInertia  // +- moment of inertia, impluse = delta Iw = I delta w
         let torque = SCNVector4(x: n.x * m.x, y: n.y * m.y, z: n.z * m.z, w: ( wOffset * (1 + Float.random(in: -0.3...0.3))))
         self.physicsBody!.applyTorque(torque, asImpulse: true)
-        //self.physicsBody!.applyTorque(SCNVector4Zero, asImpulse: true)  // turn off impulse
-//print(m,wOffset,n,torque,self.physicsBody!.usesDefaultMomentOfInertia)
+ */
+        self.physicsBody!.angularVelocity = SCNVector4(n.x, n.y, n.z, 2 * wOffset * (1 + Float.random(in: -0.3...0.3)) * Float(Int.random(in: 0...1)*2-1))
     }
     
     init(size: CGFloat) {
