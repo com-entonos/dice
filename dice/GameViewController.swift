@@ -107,10 +107,8 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
             _sceneView.addGestureRecognizer(tripleTap!)
         }
         
-//        if tapOpt[4] != .ignore {
-            pinch = UIPinchGestureRecognizer(target: self, action: #selector(handlePinch))
-            _sceneView.addGestureRecognizer(pinch!)
-//        }
+        pinch = UIPinchGestureRecognizer(target: self, action: #selector(handlePinch))
+        _sceneView.addGestureRecognizer(pinch!)
         
         // double tap is always used for table to add a die
         doubleTap = UITapGestureRecognizer(target: self, action: #selector(handleDoubleTap))
@@ -213,12 +211,14 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
                 initialY = _world.numDiePerSide
                 let pos = gestureRecognize.location(in: _sceneView)
                 let hits = _sceneView.hitTest(pos, options: nil)
-                if let object = hits.first?.node {      // get object we're touching
+                if let object = hits.first?.node {      // get object we're touching (centroid)
                     movingDie = object as? Dice         // are we on a die?
                     if movingDie == nil { movingDie = _world.nearestDie(pos: pos, tolerance: 22) } // are we close to a die?
-                    if movingDie != nil {
+                    let tapOpt = _game.throwOption
+                    if movingDie != nil && tapOpt[4] != .ignore {   // there is a die and pinch is a die action
                         aveR = pos
-                    } else {
+                    } else {                                        // just scale the Table
+                        movingDie = nil
                         for die in _world.dice { die.physicsBody?.type = .dynamic }
                     }
                 }
