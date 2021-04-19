@@ -649,8 +649,8 @@ class Ico: Dice {  // icosahedron, 20 sided die
         super.init()
         
         self.dieLength = size * 1.9
-        let size0 = size * 1.6 / 1.923
-        self.dieMass = dieDensity * size0 * size0 * size0 * (3+sqrt(5)) * 5 / 12 //* 1000000
+        let size0 = size * 1.6 / 1.923                            
+        self.dieMass = dieDensity * size0 * size0 * size0 * CGFloat((3+sqrt(5)) * 5 / 12) //* 1000000
         //self.dieMass = dieDensity * size * size * size //* 1000000
         self.dieInertia = simd_float3(1, 1, 1) * Float(self.dieMass * size0 * size0 * 2 / 5)
         

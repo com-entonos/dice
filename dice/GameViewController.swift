@@ -107,10 +107,10 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
             _sceneView.addGestureRecognizer(tripleTap!)
         }
         
-        if tapOpt[4] != .ignore {
+//        if tapOpt[4] != .ignore {
             pinch = UIPinchGestureRecognizer(target: self, action: #selector(handlePinch))
             _sceneView.addGestureRecognizer(pinch!)
-        }
+//        }
         
         // double tap is always used for table to add a die
         doubleTap = UITapGestureRecognizer(target: self, action: #selector(handleDoubleTap))
@@ -199,15 +199,34 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
     }
     
     @objc func handlePinch(_ gestureRecognize: UIPinchGestureRecognizer) {
-        if gestureRecognize.state == .ended {
-            if gestureRecognize.scale >= 1.0 { return }
-            let pos = gestureRecognize.location(in: _sceneView) //CGPoint
-            let hits = _sceneView.hitTest(pos, options: nil)
-            if let object = hits.first?.node {
-                _game.pinched(object,pos)
+        if _world.state == .rolled {
+            if gestureRecognize.state == .ended || gestureRecognize.state == .cancelled {  // done with pinch
+                if movingDie != nil && gestureRecognize.scale < numSample {
+                    let pos = gestureRecognize.location(in: _sceneView)
+                    let hits = _sceneView.hitTest(pos, options: nil)
+                    if let die = hits.first?.node as? Dice { _game.pinched(die, pos) } else { _game.pinched(movingDie!, aveR) }
+                }
+                movingDie = nil; initialY = -1.0
+                for die in _world.dice { die.physicsBody?.type = .static }
+            } else if gestureRecognize.state == .began {  // scaling the Table or pinch action on die
+                numSample = gestureRecognize.scale
+                initialY = _world.numDiePerSide
+                let pos = gestureRecognize.location(in: _sceneView)
+                let hits = _sceneView.hitTest(pos, options: nil)
+                if let object = hits.first?.node {      // get object we're touching
+                    movingDie = object as? Dice         // are we on a die?
+                    if movingDie == nil { movingDie = _world.nearestDie(pos: pos, tolerance: 22) } // are we close to a die?
+                    if movingDie != nil {
+                        aveR = pos
+                    } else {
+                        for die in _world.dice { die.physicsBody?.type = .dynamic }
+                    }
+                }
+            } else if gestureRecognize.state == .changed && movingDie == nil {  // scaling the Table
+                _world.numDiePerSide  = max(5.2, min( 60, initialY * Float(numSample / gestureRecognize.scale)))
+                numSample = gestureRecognize.scale
+                initialY = _world.numDiePerSide
             }
-        } else if gestureRecognize.state == .began {
-            gestureRecognize.scale = 1.0
         }
     }
     @objc func handleFlick(_ gestureRecognize: UIPanGestureRecognizer,_ pos: CGPoint) { // handle flicking
@@ -501,8 +520,8 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
             } else if !settingView!.history() && _game.history != nil {
                 _game.history = nil
             }
-            if _world.numDiePerSide != settingView!.numDiePerSide() { // table size changed
-                _world.numDiePerSide = settingView!.numDiePerSide()
+            if let nDPS = settingView!.numDiePerSide() {
+                _world.numDiePerSide = nDPS
             }
             if _game.throwOption != settingView!.throwOption() { // tapping die options changed
                 _game.throwOption = settingView!.throwOption()
@@ -516,6 +535,9 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
             if _game.energyThrow_ != settingView!.energy() { // changed throw energy
                 _game.energyThrow_ = settingView!.energy()
                 //print("new energy: \(_game.energyThrow_)")
+            }
+            if _world.launchType != settingView!.launch() {
+                _world.launchType = settingView!.launch()
             }
             settingView!.removeFromSuperview() // dismiss setting view
         }; settingView = nil

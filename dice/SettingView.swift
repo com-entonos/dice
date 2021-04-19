@@ -22,6 +22,7 @@ class SettingView : UIView, UIPickerViewDataSource, UIPickerViewDelegate, UIScro
     let diceSegment = UISegmentedControl()
     let undoSegment = UISegmentedControl()
     let energySegment = UISegmentedControl()
+    let launchSegment = UISegmentedControl()
     
     let games : [String]
     let tapOpt = ["Ignore", "Throw", "Keep", "Select", "Remove", "Add"] //ignore = 0, roll, hold, select, remove
@@ -30,6 +31,7 @@ class SettingView : UIView, UIPickerViewDataSource, UIPickerViewDelegate, UIScro
     let dieOpt = ["Tiny", "Small", "Normal", "Large", "Huge"]
     let pulseOpt = ["On", "Off"]
     let energyOpt = ["Casual", "Nominal", "Excited"]
+    let launchOpt = ["Gatther", "Scatter"]
     var defaultTap = [[TapOptions]]()
     
     init(frame: CGRect, safe: CGRect, game: Game) {
@@ -50,6 +52,7 @@ class SettingView : UIView, UIPickerViewDataSource, UIPickerViewDelegate, UIScro
         pulseSwitch.frame =   CGRect(x: dw+110 + (tapWidth-70)/2,  y: 430, width: 70, height: 35)
         undoSegment.frame =   CGRect(x: dw+110 + (tapWidth-300)/2, y: 480, width: 300, height: 35)
         historySwitch.frame = CGRect(x: dw+110 + (tapWidth-70)/2,  y: 530, width: 70, height: 35)
+        launchSegment.frame = CGRect(x: dw+100 + (tapWidth-200)/2, y: 580, width: 200, height: 35)
         
         let label1 = UILabel(frame: CGRect(x: dw+0, y: 0, width: 100, height: 150)); label1.text = "Game:";         label1.font = .systemFont(ofSize: 18); label1.textAlignment = .right
         let label4 = UILabel(frame: CGRect(x: dw+100, y: 125, width: tapWidth, height: 100)); label4.text = "single tap          double tap           triple tap            long tap               pinch"//; label4.textColor = .black;
@@ -60,6 +63,7 @@ class SettingView : UIView, UIPickerViewDataSource, UIPickerViewDelegate, UIScro
         let label6 = UILabel(frame: CGRect(x: dw+0, y: 430, width: 100, height: 35)); label6.text = "Pulse dice:"; label6.font = .systemFont(ofSize: 18); label6.textAlignment = .right
         let label5 = UILabel(frame: CGRect(x: dw+0, y: 480, width: 150, height: 35)); label5.text = "Number of undo:"; label5.font = .systemFont(ofSize: 18)
         let label8 = UILabel(frame: CGRect(x: dw+0, y: 530, width: 100, height: 35)); label8.text = "History:"; label8.font = .systemFont(ofSize: 18); label8.textAlignment = .right
+        let label9 = UILabel(frame: CGRect(x: dw+0, y: 580, width: 100, height: 35)); label9.text = "Launch:"; label9.font = .systemFont(ofSize: 18); label9.textAlignment = .right
         
         let doneButton = UIButton(type: .system) //UIButton()
         let donateButton = UIButton(type: .system) //UIButton()
@@ -71,8 +75,8 @@ class SettingView : UIView, UIPickerViewDataSource, UIPickerViewDelegate, UIScro
             donateButton.frame = CGRect(x: safe.origin.x, y: safe.origin.y + safe.height-50, width: 150, height: 40)
         }
 
-        scrollView.contentSize = CGSize(width: safe.width, height: 575)
-        settingView.frame = CGRect(x: 0, y: 0, width: safe.width, height: 550)
+        scrollView.contentSize = CGSize(width: safe.width, height: 625)
+        settingView.frame = CGRect(x: 0, y: 0, width: safe.width, height: 600)
         scrollView.frame = CGRect(x: safe.origin.x, y: 0, width: safe.width, height: safe.height-60)
         settingView.translatesAutoresizingMaskIntoConstraints = false
         settingView.backgroundColor = UIColor.clear
@@ -102,8 +106,13 @@ class SettingView : UIView, UIPickerViewDataSource, UIPickerViewDelegate, UIScro
         } else if dieSize == 30 {
             diceSegment.selectedSegmentIndex = 0
         } else {
-            diceSegment.selectedSegmentIndex = 2
+            diceSegment.selectedSegmentIndex = -1 //2
         }
+        
+        for i in 0..<launchOpt.count {
+            launchSegment.insertSegment(withTitle: launchOpt[i], at: i, animated: true)
+        }
+        launchSegment.selectedSegmentIndex = (game.world_.launchType == .gather) ? 0 : 1
         
         for eachGame in Games.allCases {
             self.defaultTap.append(game.defaultTap(game: eachGame))
@@ -170,6 +179,7 @@ class SettingView : UIView, UIPickerViewDataSource, UIPickerViewDelegate, UIScro
         settingView.addSubview(pulseSwitch)
         settingView.addSubview(energySegment)
         settingView.addSubview(historySwitch)
+        settingView.addSubview(launchSegment)
         settingView.addSubview(label5)
         settingView.addSubview(label1)
         settingView.addSubview(label2)
@@ -178,6 +188,7 @@ class SettingView : UIView, UIPickerViewDataSource, UIPickerViewDelegate, UIScro
         settingView.addSubview(label6)
         settingView.addSubview(label7)
         settingView.addSubview(label8)
+        settingView.addSubview(label9)
         scrollView.addSubview(settingView)
         self.addSubview(doneButton)
         self.addSubview(donateButton)
@@ -200,8 +211,11 @@ class SettingView : UIView, UIPickerViewDataSource, UIPickerViewDelegate, UIScro
     func history() -> Bool {
         return historySwitch.isOn
     }
+    func launch() -> LaunchType {
+        return (launchSegment.selectedSegmentIndex == 0) ? .gather : .scatter
+    }
     
-    func numDiePerSide() -> Float { // table size changed
+    func numDiePerSide() -> Float? { // table size changed
         switch diceSegment.selectedSegmentIndex {
         case 0:
             return Float(30)
@@ -214,7 +228,7 @@ class SettingView : UIView, UIPickerViewDataSource, UIPickerViewDelegate, UIScro
         case 4:
             return Float(5.2) // minimum so that dice in hexagon pattern can fit: i.e. > 3 * sqrt(3) * die.size
         default:
-            return Float(10)
+            return nil //Float(10)
         }
     }
     

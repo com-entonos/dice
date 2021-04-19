@@ -14,6 +14,10 @@ enum WorldState {
     case rolling, rolled, moving
 }
 
+enum LaunchType: Int, CaseIterable {
+    case gather = 0, scatter
+}
+
 class World: SCNScene, SCNPhysicsContactDelegate {
     
     class Undo {  //class to keep track for undo and redo
@@ -59,6 +63,7 @@ class World: SCNScene, SCNPhysicsContactDelegate {
     
     private var launchHeight : Float    // default height to throw dice
     private var scaleLH = Float(1)         // and it's scaling
+    private var _launchType = LaunchType.gather
     
     private var running = 1             // a 'trick' to not exit .rolling state prematurely
     
@@ -78,6 +83,10 @@ class World: SCNScene, SCNPhysicsContactDelegate {
     
     var state: WorldState {
         get {return _state}
+    }
+    var launchType: LaunchType {
+        get { return _launchType}
+        set (value) { _launchType = value }
     }
     var launch: Float {
         get { return scaleLH }
@@ -137,25 +146,20 @@ class World: SCNScene, SCNPhysicsContactDelegate {
             return numberDiceShortSide
         }
         set (value) {
-            let scale = value / numberDiceShortSide
-            numberDiceShortSide = value
-            adjustGameBoard()
-            if _dice.count > 0 {
-                /*
-                if numberDiceShortSide > 11 { //}|| numberDiceShortSide < 6 {
-                    self.physicsWorld.timeStep = 1.0/240.0
-                } else {
-                    self.physicsWorld.timeStep = 1.0/120.0
-                }
-                */
-                for die in _dice {
-                    let r = die.presentation.simdPosition
-                    die.simdPosition = simd_float3(r.x * scale, r.y * 1.001, r.z * scale)
-                    die.physicsBody!.resetTransform()
-                    if numberDiceShortSide < 6 {
-                        die.physicsBody?.restitution = 0.5 // too many collisions for size of box, increase energy loss
-                    } else {
-                        die.physicsBody?.restitution = die.restitution
+            if numberDiceShortSide != value {
+                let scale = value / numberDiceShortSide
+                numberDiceShortSide = value
+                adjustGameBoard()
+                if _dice.count > 0 {
+                    for die in _dice {
+                        let r = die.presentation.simdPosition
+                        die.simdPosition = simd_float3(r.x * scale, r.y * 1.001, r.z * scale)
+                        die.physicsBody!.resetTransform()
+                        if numberDiceShortSide < 6 {
+                            die.physicsBody?.restitution = 0.5 // too many collisions for size of box, increase energy loss
+                        } else {
+                            die.physicsBody?.restitution = die.restitution
+                        }
                     }
                 }
             }
@@ -623,51 +627,72 @@ class World: SCNScene, SCNPhysicsContactDelegate {
         
         var i = -1
         var ri = Float(0)
-        for die in dieSelection.shuffled() {  // shuffle dice
-            i += 1
-            let nO = die.randomOrientation()    // random starting orientation
-            let size = 1.2 * die.circumR
-            var rt = r0 + simd_float3(0, Float(Int(i/(poly+1)))*maxR*2.5 + launchHeight*scaleLH, 0) // group seven dice together, increase height for every group
-            if i % (poly+1) == 0  {
-                ri = 1.2 * die.circumR
-                phi = Float.random(in: 0.0...(2*Float.pi))  // set initial phi for other dice
-            } else {
-                rt += simd_float3((ri+size)*cos(phi+Float(i%poly)*dphi),0,(ri+size)*sin(phi+Float(i%poly)*dphi)) // not center die, put in hexagon arrangement
+        
+        if _launchType == .gather {
+            for die in dieSelection.shuffled() {  // shuffle dice
+                i += 1
+                let nO = die.randomOrientation()    // random starting orientation
+                let size = 1.2 * die.circumR
+                var rt = r0 + simd_float3(0, Float(Int(i/(poly+1)))*maxR*2.5 + launchHeight*scaleLH, 0) // group seven dice together, increase height for every group
+                if i % (poly+1) == 0  {
+                    ri = 1.2 * die.circumR
+                    phi = Float.random(in: 0.0...(2*Float.pi))  // set initial phi for other dice
+                } else {
+                    rt += simd_float3((ri+size)*cos(phi+Float(i%poly)*dphi),0,(ri+size)*sin(phi+Float(i%poly)*dphi)) // not center die, put in hexagon arrangement
+                }
+                let r = rt
+                die.simdOrientation = die.presentation.simdOrientation
+                die.simdPosition = die.presentation.simdPosition
+                die.physicsBody?.type = .static
+                die.physicsBody?.resetTransform()
+                
+                // let's move the die from their positions to throwing positions- translation then rotations, ignoring collisions. just eye candy
+                let newRot = simd_mul(nO,die.presentation.simdOrientation.inverse)  // this is rotation to current orientation to new random orentation: q = q_new * inverse(q_current)
+                //let composite = SCNAction.group([SCNAction.move(to: SCNVector3(x: r.x, y: r.y, z: r.z), duration: 0.1 ),
+                /*let composite = SCNAction.sequence([SCNAction.move(to: SCNVector3(x: r.x, y: r.y, z: r.z), duration: 0.15 ),
+                                                    SCNAction.rotate(by: CGFloat(newRot.angle),
+                                                                     around: SCNVector3(newRot.axis.x, newRot.axis.y, newRot.axis.z), duration: 0.15)])*/
+                let composite = SCNAction.group([SCNAction.move(to: SCNVector3(x: r.x, y: r.y, z: r.z), duration: 0.2 ),
+                                                 SCNAction.rotate(by: CGFloat(newRot.angle), around: SCNVector3(newRot.axis.x, newRot.axis.y, newRot.axis.z), duration: 0.21)])
+                die.physicsBody?.collisionBitMask = 0
+    //print("\(icc) \(die.physicsBody!.collisionBitMask) \(die)")
+                die.runAction(composite, completionHandler: { () in
+    //print(die.presentation.simdPosition-r,die.presentation.simdOrientation-nO)
+                    die.physicsBody?.type = .dynamic
+                    die.physicsBody!.clearAllForces() // moving into position may have caused collision forces, ignore them!
+                    die.simdPosition = r
+                    die.simdOrientation = nO
+                    die.physicsBody!.resetTransform()
+                    // create random vector of v and omega and add
+                    let rndv = SCNVector3(x: vperp*Float.random(in: -0.25...0.25), y: vperp*Float.random(in: -0.25...0.25), z: vperp*Float.random(in: -0.25...0.25)) // upto 1/8 the potential energy is random in each component (max is 3/8)
+                    let rndo = Float.random(in: -1...1) //Float.random(in: 0.25...1)*Float(Int.random(in: 0...1)*2-1)
+                    die.randomVelocity(SCNVector3(vperp * v.x * Float.random(in: 0.9...1.1) + rndv.x,
+                                                  0.1*vperp*Float.random(in: 0.9...1.1)     + rndv.y,
+                                                  vperp * v.z * Float.random(in: 0.9...1.1) + rndv.z))                  // random linear velocity
+                    let inertia = die.physicsBody?.momentOfInertia
+                    let mass = Float(die.physicsBody!.mass)*2*9.8*self.launchHeight
+                    die.randomOmega((frot*Float.random(in: 0.9...1.1)+rndo)*sqrt(mass/inertia!.y)*0.5)
+                    die.physicsBody?.collisionBitMask = 3
+                })
             }
-            let r = rt
-            die.simdOrientation = die.presentation.simdOrientation
-            die.simdPosition = die.presentation.simdPosition
-            die.physicsBody?.type = .static
-            die.physicsBody?.resetTransform()
-            
-            // let's move the die from their positions to throwing positions- translation then rotations, ignoring collisions. just eye candy
-            let newRot = simd_mul(nO,die.presentation.simdOrientation.inverse)  // this is rotation to current orientation to new random orentation: q = q_new * inverse(q_current)
-            //let composite = SCNAction.group([SCNAction.move(to: SCNVector3(x: r.x, y: r.y, z: r.z), duration: 0.1 ),
-            /*let composite = SCNAction.sequence([SCNAction.move(to: SCNVector3(x: r.x, y: r.y, z: r.z), duration: 0.15 ),
-                                                SCNAction.rotate(by: CGFloat(newRot.angle),
-                                                                 around: SCNVector3(newRot.axis.x, newRot.axis.y, newRot.axis.z), duration: 0.15)])*/
-            let composite = SCNAction.group([SCNAction.move(to: SCNVector3(x: r.x, y: r.y, z: r.z), duration: 0.2 ),
-                                             SCNAction.rotate(by: CGFloat(newRot.angle), around: SCNVector3(newRot.axis.x, newRot.axis.y, newRot.axis.z), duration: 0.21)])
-            die.physicsBody?.collisionBitMask = 0
-//print("\(icc) \(die.physicsBody!.collisionBitMask) \(die)")
-            die.runAction(composite, completionHandler: { () in
-//print(die.presentation.simdPosition-r,die.presentation.simdOrientation-nO)
-                die.physicsBody?.type = .dynamic
-                die.physicsBody!.clearAllForces() // moving into position may have caused collision forces, ignore them!
-                die.simdPosition = r
-                die.simdOrientation = nO
+        } else {
+            for die in dieSelection.shuffled() {
+                die.simdOrientation = die.presentation.simdOrientation
+                let pos = die.presentation.simdPosition
+                die.simdPosition = convert(pos: convert(pos: simd_float3( pos.x, pos.y + die.circumR, pos.z)))
                 die.physicsBody!.resetTransform()
-                // create random vector of v and omega and add
-                let rndv = SCNVector3(x: vperp*Float.random(in: -0.25...0.25), y: vperp*Float.random(in: -0.25...0.25), z: vperp*Float.random(in: -0.25...0.25)) // upto 1/8 the potential energy is random in each component (max is 3/8)
-                let rndo = Float.random(in: -1...1) //Float.random(in: 0.25...1)*Float(Int.random(in: 0...1)*2-1)
+                let rndv = SCNVector3(x: vperp*Float.random(in: -0.25...0.25), y: vperp*Float.random(in: 0...0.25), z: vperp*Float.random(in: -0.25...0.25))
+                die.physicsBody?.type = .dynamic
+                die.physicsBody!.clearAllForces()
                 die.randomVelocity(SCNVector3(vperp * v.x * Float.random(in: 0.9...1.1) + rndv.x,
-                                              0.1*vperp*Float.random(in: 0.9...1.1)     + rndv.y,
-                                              vperp * v.z * Float.random(in: 0.9...1.1) + rndv.z))                  // random linear velocity
+                                              vperp * 2.5 * Float.random(in: 0.9...1.1) + rndv.y,
+                                              vperp * v.z * Float.random(in: 0.9...1.1) + rndv.z))
                 let inertia = die.physicsBody?.momentOfInertia
                 let mass = Float(die.physicsBody!.mass)*2*9.8*self.launchHeight
-                die.randomOmega((frot*Float.random(in: 0.9...1.1)+rndo)*sqrt(mass/inertia!.y)*0.5)
+                die.randomOmega((max(0.25, frot) * Float.random(in: 0.8...1.4))*sqrt(mass/inertia!.y)*0.5)
                 die.physicsBody?.collisionBitMask = 3
-            })
+            }
+                            
         }
         unselectDie(die: nil)
         _state = .rolling  // set state to .rolling
@@ -683,7 +708,8 @@ class World: SCNScene, SCNPhysicsContactDelegate {
         let cameraY = (convert(d: CGFloat(30)) + Float(min(wScale,hScale))) / 2 / Float(tan(otherFOV))  // add 30 points for a border
         launchHeight = cameraY * 10 / 18  // launch dice below the camera
         launchHeight = min(8 * dieSize, launchHeight)
-        let dScale = CGFloat(launchHeight*scaleLH + 125 * dieSize) // height of the box, so dice can never escape (right apple?)
+        let dScale = CGFloat(launchHeight*scaleLH*5)
+//      let dScale = CGFloat(launchHeight*scaleLH + 125 * dieSize) // height of the box, so dice can never escape (right apple?)
         for node in self.rootNode.childNodes {
             if node.name! == "camera" {
                 node.position = SCNVector3(x: 0, y: cameraY, z: 0)
@@ -730,8 +756,8 @@ class World: SCNScene, SCNPhysicsContactDelegate {
         let cameraY = (convert(d: CGFloat(30)) + Float(min(wScale,hScale))) / 2 / Float(tan(otherFOV)) // add 30 points at edge for border
         launchHeight = cameraY * 10 / 18  // launch dice below the camera
         launchHeight = min(8 * dieSize, launchHeight)
-        let dScale = CGFloat(launchHeight*scaleLH + 125 * dieSize) // height of the box, so dice can never escape (right apple?)
-        
+        let dScale = CGFloat(launchHeight*scaleLH*5) // height of the box, so dice can never escape (right apple?)
+//      let dScale = CGFloat(launchHeight*scaleLH + 125 * dieSize)
 //print("ar:\(ar), width:\(width), height:\(height)")
 //print("wS:\(wScale), hS:\(hScale), camera:\(cameraY), launchHeight:\(launchHeight), scaleLH:\(scaleLH), dScale:\(dScale)")
         

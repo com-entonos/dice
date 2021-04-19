@@ -106,6 +106,7 @@ class HelpView : UIView {
         } else if game != .freeplay {
             tacts = ["tap to drop dice", "swipe to throw dice"]
         }
+        tacts.append("pinch to zoom")
         for i in 0..<tacts.count {
             let dice = UILabel(frame: CGRect(x: x1, y: y, width: 200, height: 20))
             dice.textColor = .white
