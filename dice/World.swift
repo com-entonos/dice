@@ -683,7 +683,7 @@ class World: SCNScene, SCNPhysicsContactDelegate {
             for die in dieSelection.shuffled() {
                 die.simdOrientation = die.presentation.simdOrientation
                 let pos = die.presentation.simdPosition
-                die.simdPosition = convert(pos: convert(pos: simd_float3( pos.x, pos.y + die.circumR, pos.z)))
+                die.simdPosition = convert(pos: convert(pos: simd_float3( pos.x, pos.y + 1.1 * die.circumR, pos.z)))
                 die.physicsBody!.resetTransform()
                 let rndv = SCNVector3(x: vperp*Float.random(in: -0.25...0.25), y: vperp*Float.random(in: 0...0.25), z: vperp*Float.random(in: -0.25...0.25))
                 die.physicsBody?.type = .dynamic
