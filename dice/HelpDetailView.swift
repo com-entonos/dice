@@ -25,11 +25,11 @@ class HelpDetailView : UIView {
         if safe.origin.x == 0 {
             scrollView.frame = CGRect(x: 40, y: 0, width: safe.width-40*2, height: safe.height-60)
             doneButton.frame = CGRect(x: safe.width - 160, y: safe.height-50, width: 110, height: 40)
-            donateButton.frame = CGRect(x: 40, y: safe.height-50, width: 150, height: 40)
+            donateButton.frame = CGRect(x: 40, y: safe.height-50, width: 200, height: 40)
         } else {
             scrollView.frame = CGRect(x: safe.origin.x, y: safe.origin.y, width: safe.width, height: safe.height-60)
             doneButton.frame = CGRect(x: safe.origin.x + safe.width - 150, y: safe.origin.y + safe.height-50, width: 150, height: 40)
-            donateButton.frame = CGRect(x: safe.origin.x, y: safe.origin.y + safe.height-50, width: 150, height: 40)
+            donateButton.frame = CGRect(x: safe.origin.x, y: safe.origin.y + safe.height-50, width: 200, height: 40)
         }
         
         scrollView.translatesAutoresizingMaskIntoConstraints = false
@@ -55,7 +55,7 @@ class HelpDetailView : UIView {
         
         donateButton.backgroundColor = UIColor.clear
         //donateButton.setTitle("Donate", for: .normal)
-        donateButton.setTitle("Visit Entonos", for: .normal)
+        donateButton.setTitle("Say \"hi\" to Entonos!", for: .normal)
         //donateButton.setTitleColor(.red, for: .normal)
         donateButton.titleLabel?.textAlignment = .left
         donateButton.titleLabel?.font = UIFont(name: "Arial", size: 18)

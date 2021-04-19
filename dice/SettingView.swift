@@ -69,10 +69,10 @@ class SettingView : UIView, UIPickerViewDataSource, UIPickerViewDelegate, UIScro
         let donateButton = UIButton(type: .system) //UIButton()
         if safe.origin.x == 0 {
             doneButton.frame = CGRect(x: safe.width - 160, y: safe.height-50, width: 110, height: 40)
-            donateButton.frame = CGRect(x: 40, y: safe.height-50, width: 150, height: 40)
+            donateButton.frame = CGRect(x: 40, y: safe.height-50, width: 200, height: 40)
         } else {
             doneButton.frame = CGRect(x: safe.origin.x + safe.width - 160, y: safe.origin.y + safe.height-50, width: 160, height: 40)
-            donateButton.frame = CGRect(x: safe.origin.x, y: safe.origin.y + safe.height-50, width: 150, height: 40)
+            donateButton.frame = CGRect(x: safe.origin.x, y: safe.origin.y + safe.height-50, width: 200, height: 40)
         }
 
         scrollView.contentSize = CGSize(width: safe.width, height: 625)
@@ -167,7 +167,7 @@ class SettingView : UIView, UIPickerViewDataSource, UIPickerViewDelegate, UIScro
         donateButton.backgroundColor = UIColor.clear
         //donateButton.setTitle("Donate", for: .normal)
         //donateButton.setTitleColor(.red, for: .normal)
-        donateButton.setTitle("Visit Entonos", for: .normal)
+        donateButton.setTitle("Say \"hi\" to Entonos!", for: .normal)
         donateButton.titleLabel?.textAlignment = .left
         donateButton.titleLabel?.font = UIFont(name: "Arial", size: 18)
         donateButton.addTarget(self, action: #selector(self.donate), for: .touchUpInside)

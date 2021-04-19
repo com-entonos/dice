@@ -77,14 +77,13 @@ class HelpView : UIView {
                 y += 20
             }
         }
-        if y == y0 + 20 {
-            let dice = UILabel(frame: CGRect(x: x0, y: y, width: 200, height: 20))
-            dice.textColor = .white
-            dice.textAlignment = .left
-            dice.text = "no dice actions"
-            dice.font = UIFont(name: "Arial", size: 18)
-            self.addSubview(dice)
-        }
+        let dice = UILabel(frame: CGRect(x: x0, y: y, width: 200, height: 20))
+        dice.textColor = .white
+        dice.textAlignment = .left
+        dice.text = "drag to move"
+        dice.font = UIFont(name: "Arial", size: 18)
+        self.addSubview(dice)
+    
         
         let game = game.game_
 
