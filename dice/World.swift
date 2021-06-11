@@ -712,7 +712,7 @@ class World: SCNScene, SCNPhysicsContactDelegate {
         let cameraY = (convert(d: CGFloat(30)) + Float(min(wScale,hScale))) / 2 / Float(tan(otherFOV))  // add 30 points for a border
         launchHeight = cameraY * 10 / 18  // launch dice below the camera
         launchHeight = min(8 * dieSize, launchHeight)
-        let dScale = CGFloat(launchHeight*scaleLH*5)
+        let dScale = CGFloat(launchHeight*scaleLH*5 + 45 * dieSize)
 //      let dScale = CGFloat(launchHeight*scaleLH + 125 * dieSize) // height of the box, so dice can never escape (right apple?)
         for node in self.rootNode.childNodes {
             if node.name! == "camera" {
@@ -760,7 +760,7 @@ class World: SCNScene, SCNPhysicsContactDelegate {
         let cameraY = (convert(d: CGFloat(30)) + Float(min(wScale,hScale))) / 2 / Float(tan(otherFOV)) // add 30 points at edge for border
         launchHeight = cameraY * 10 / 18  // launch dice below the camera
         launchHeight = min(8 * dieSize, launchHeight)
-        let dScale = CGFloat(launchHeight*scaleLH*5) // height of the box, so dice can never escape (right apple?)
+        let dScale = CGFloat(launchHeight*scaleLH*5 + 45 * dieSize) // height of the box, so dice can never escape (right apple?)
 //      let dScale = CGFloat(launchHeight*scaleLH + 125 * dieSize)
 //print("ar:\(ar), width:\(width), height:\(height)")
 //print("wS:\(wScale), hS:\(hScale), camera:\(cameraY), launchHeight:\(launchHeight), scaleLH:\(scaleLH), dScale:\(dScale)")
