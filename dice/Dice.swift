@@ -21,10 +21,7 @@ let tinyIcon : [ DieType: String] = [ .dice6 : "cubeTinyIcon", .dice2 : "coinTin
 class Dice : SCNNode {
     // base class for die
     
-    //static let pro1toDie = SCNScene(named: "art.scnassets/dice05.scn")!.rootNode.childNodes[0].geometry as! SCNGeometry
-    //static let protoDie = SCNScene(named: "art.scnassets/dice05.scn")?.rootNode.childNodes[0]
-    //static let protoDie = SCNScene(named: "art.scnassets/coin02.scn")?.rootNode.childNodes[0]
-    
+    var geom = [ DieType.dice6 : SCNScene(named: "art.scnassets/cube.scn")!.rootNode.childNodes[0].geometry ] // root geometry
     var dieLength : CGFloat   = 0   // side lenghth of die (m)
     var dieMass : CGFloat = 0       // mass of die (kg)
     private var _dieType : DieType = .dice2 // type of die
@@ -306,7 +303,8 @@ class Coin : Dice {  // coin, 2 sided die
         self.dieCircumR = size0
         self.dieMidR = size0 / 2 //size * 0.15 * 2 //size0 / 4
         
-        self.geometry = SCNScene(named: "art.scnassets/coin.scn")!.rootNode.childNodes[0].geometry
+        if geom[self.dieType] == nil { geom[self.dieType] = SCNScene(named: "art.scnassets/coin.scn")!.rootNode.childNodes[0].geometry }
+        self.geometry = geom[self.dieType]!!.copy() as? SCNGeometry
         var physCoin: SCNNode {
             
             let parent = SCNNode()
@@ -362,7 +360,8 @@ class Tet: Dice {  // tetrahedron, 4 sided dice
         self.dieType = .dice4
         let inertia = self.dieInertia
         
-        self.geometry = SCNScene(named: "art.scnassets/tet.scn")!.rootNode.childNodes[0].geometry
+        if geom[self.dieType] == nil { geom[self.dieType] = SCNScene(named: "art.scnassets/tet.scn")!.rootNode.childNodes[0].geometry }
+        self.geometry = geom[self.dieType]!?.copy() as? SCNGeometry
         self.dieInR = 0.06740 //0.067401 // analytic: a/sqrt(24) = 0.2041241452 a
         self.dieCircumR = size0 * sqrt(3/8) * 1.15
         self.dieMidR = size0 / sqrt(8)
@@ -448,7 +447,8 @@ class Oct: Dice {  //octahedron, 8 sided die
         self.name = "die8"
         self.diffuseName = "oct"
         self.dieType = .dice8
-        self.geometry = SCNScene(named: "art.scnassets/oct.scn")!.rootNode.childNodes[0].geometry
+        if geom[self.dieType] == nil { geom[self.dieType] = SCNScene(named: "art.scnassets/oct.scn")!.rootNode.childNodes[0].geometry }
+        self.geometry = geom[self.dieType]!?.copy() as? SCNGeometry
         self.simdScale = simd_float3(1,1,1) * sqrt(2) * 0.1 / 1.85
         self.dieInR = 0.080825 // analytic: a / sqrt(2) =  0.7071067812 a = 0.7071067812 size0
         self.dieCircumR = size0 / sqrt(2) * 1.20
@@ -512,7 +512,8 @@ class Dec: Dice {  // 10 sided die
         self.name = "die10"
         self.diffuseName = "dec"
         self.dieType = .dice10
-        self.geometry = SCNScene(named: "art.scnassets/dec.scn")!.rootNode.childNodes[0].geometry
+        if geom[self.dieType] == nil { geom[self.dieType] = SCNScene(named: "art.scnassets/dec.scn")!.rootNode.childNodes[0].geometry }
+        self.geometry = geom[self.dieType]!?.copy() as? SCNGeometry
         self.simdScale = simd_float3(1,1,1) * 1.26 * 0.1 / 1.124
         self.dieInR = 0.0462955
         self.dieCircumR = size0 * 0.65
@@ -586,10 +587,11 @@ class Dod: Dice {  // dodecahedron, 12 sided die
         self.name = "die12"
         self.diffuseName = "dod"
         self.dieType = .dice12
-        self.geometry = SCNScene(named: "art.scnassets/dod.scn")!.rootNode.childNodes[0].geometry
+        if geom[self.dieType] == nil { geom[self.dieType] = SCNScene(named: "art.scnassets/dod.scn")!.rootNode.childNodes[0].geometry }
+        self.geometry = geom[self.dieType]!?.copy() as? SCNGeometry
         self.simdScale = simd_float3(1,1,1) * 0.1 * 1.4 / 1.81
         self.dieInR = 0.0599975  // analytic: a sqrt(5/2 + 11 sqrt(5) / 10) / 2 = a gr^2/2/sqrt(3-gr) = 1.1135163644 a = 0.5891114002 scale -> (0.5891114002 - balls) scale =
-        self.dieCircumR = size0 * sqrt(3) * (1+sqrt(5)) / 4
+        self.dieCircumR = size0 * CGFloat(sqrt(3.0) * (1.0+sqrt(5.0)) / 4.0)
         self.dieMidR = self.dieInR //size0 * (3+sqrt(5)) / 4
         
         var physDod: SCNNode {
@@ -662,7 +664,8 @@ class Ico: Dice {  // icosahedron, 20 sided die
         self.name = "die20"
         self.diffuseName = "ico"
         self.dieType = .dice20
-        self.geometry = SCNScene(named: "art.scnassets/ico.scn")!.rootNode.childNodes[0].geometry
+        if geom[self.dieType] == nil { geom[self.dieType] = SCNScene(named: "art.scnassets/ico.scn")!.rootNode.childNodes[0].geometry }
+        self.geometry = geom[self.dieType]!?.copy() as? SCNGeometry
         self.simdScale = simd_float3(1,1,1) * 0.1 * 1.6 / 1.923
         self.dieInR = 0.0654445  // analytic: a sqrt(3) * (3+sqrt(5)) / 12 = a gr^2/2/sqrt(3) = 0.7557613141 a = 0.6288185661 a
         self.dieCircumR = size0 * sqrt(10 + 2*sqrt(5)) / 4
@@ -775,13 +778,13 @@ class Cube : Dice { // cube, 6 sided die
         self.dieInertia = simd_float3(1, 1, 1) * Float(self.dieMass * size * size / 6)
         self.dieInR = size / 2
         self.dieCircumR = size * sqrt(3) / 2
-        self.dieMidR = size / sqrt(2)
+        self.dieMidR = (size / sqrt(2) + size / 2) / 2
         
         self.name = "die6"
         self.diffuseName = "cube"
         self.dieType = .dice6
         let inertia = self.dieInertia
-        self.geometry = SCNScene(named: "art.scnassets/cube.scn")!.rootNode.childNodes[0].geometry
+        self.geometry = geom[self.dieType]!?.copy() as? SCNGeometry
         self.physicsBody!.physicsShape = SCNPhysicsShape(geometry: SCNBox(width: size, height: size, length: size, chamferRadius: size*0.1), options: nil)
         self.physicsBody!.momentOfInertia = SCNVector3(inertia.x, inertia.y, inertia.z)
         self.physicsBody!.mass = self.dieMass
