@@ -291,7 +291,7 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
     func createButtons() { // create help, sound, setting and un/re/do buttons
 
         //sound button
-        soundButton.frame = CGRect(x: overlayBounds.width - 34, y: 0, width: 34, height: 34)
+        soundButton.frame = CGRect(x: overlayBounds.width - 39, y: 0, width: 34, height: 34)
         soundButton.backgroundColor = UIColor.clear
         soundButton.setImage(UIImage(named: "mute"), for: .normal)
         soundButton.contentVerticalAlignment = .fill; soundButton.contentHorizontalAlignment = .fill
@@ -329,7 +329,7 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
         _sceneView.addSubview(helpButton)
         
         //undo button
-        undoButton.frame = CGRect(x: 0, y: 0, width: 34, height: 34)
+        undoButton.frame = CGRect(x: 0, y: 2, width: 34, height: 34)
         undoButton.backgroundColor = UIColor.clear
         undoButton.setImage(UIImage(named: "undo"), for: .normal)
         undoButton.contentVerticalAlignment = .fill; undoButton.contentHorizontalAlignment = .fill
@@ -342,7 +342,7 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
 
         //redo button
         //redoButton.frame = CGRect(x: 0, y: 54, width: 34, height: 34)
-        redoButton.frame = CGRect(x: 54, y: 0, width: 34, height: 34)
+        redoButton.frame = CGRect(x: 54, y: 2, width: 34, height: 34)
         redoButton.backgroundColor = UIColor.clear
         redoButton.setImage(UIImage(named: "redo"), for: .normal)
         redoButton.contentVerticalAlignment = .fill; redoButton.contentHorizontalAlignment = .fill
