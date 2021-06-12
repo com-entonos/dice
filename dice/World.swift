@@ -593,25 +593,25 @@ class World: SCNScene, SCNPhysicsContactDelegate {
     
     func randomThrow() -> SCNVector3 { return SCNVector3Zero}
     
-    func rollRandom () {
+    func rollRandom (_ toggle: Bool = false) {
         let phi = Float.random(in: 0...(2*Float.pi))
-        roll(v: SCNVector3(x: cos(phi), y: 0, z: sin(phi)), frot: Float(1.0), pos: CGPoint(x: width/2, y: height/2))
+        roll(v: SCNVector3(x: cos(phi), y: 0, z: sin(phi)), frot: Float(1.0), pos: CGPoint(x: width/2, y: height/2), toggle)
     }
-    func roll( die: Dice) { // selected one dice
+    func roll( die: Dice, _ toggle: Bool = false) { // selected one dice
 
         if !dieHold.contains(die) {
             unselectDie(die: nil)
             selectDie(die)
             let phi = Float.random(in: 0...(2*Float.pi))
-            roll(v: SCNVector3(x: cos(phi), y: 0, z: sin(phi)), frot: Float(1.0), pos: convert(pos: die.presentation.simdPosition)) // extra lateral speed or spin
+            roll(v: SCNVector3(x: cos(phi), y: 0, z: sin(phi)), frot: Float(1.0), pos: convert(pos: die.presentation.simdPosition), toggle) // extra lateral speed or spin
         }
     }
     
-    func roll(_ pos: CGPoint) { roll(v: randomThrow(), frot: 0, pos: pos) }
+    func roll(_ pos: CGPoint,_ toggle: Bool = false) { roll(v: randomThrow(), frot: 0, pos: pos, toggle) }
     
-    func roll() { roll(v: randomThrow(), frot: 0, pos: CGPoint(x: width/2, y: height/2)) }
+    func roll(_ toggle: Bool = false) { roll(v: randomThrow(), frot: 0, pos: CGPoint(x: width/2, y: height/2), toggle) }
     
-    func roll(v: SCNVector3, frot: Float, pos: CGPoint) {  // roll all dice (or just the selection if exists
+    func roll(v: SCNVector3, frot: Float, pos: CGPoint, _ toggle: Bool = false) {  // roll all dice (or just the selection if exists
         if !(dieSelection.count > 0) { dieSelection = Array(Set(_dice).subtracting(dieHold)) }
         if !(dieSelection.count > 0) { return }
         clearUnReDo()
@@ -632,7 +632,7 @@ class World: SCNScene, SCNPhysicsContactDelegate {
         var i = -1
         var ri = Float(0)
         
-        if _launchType == .gather {
+        if (_launchType == .gather && !toggle) || (_launchType == .scatter && toggle) {
             for die in dieSelection.shuffled() {  // shuffle dice
                 i += 1
                 let nO = die.randomOrientation()    // random starting orientation
@@ -712,7 +712,7 @@ class World: SCNScene, SCNPhysicsContactDelegate {
         let cameraY = (convert(d: CGFloat(30)) + Float(min(wScale,hScale))) / 2 / Float(tan(otherFOV))  // add 30 points for a border
         launchHeight = cameraY * 10 / 18  // launch dice below the camera
         launchHeight = min(8 * dieSize, launchHeight)
-        let dScale = CGFloat(launchHeight*scaleLH*5 + 45 * dieSize)
+        let dScale = CGFloat(launchHeight*scaleLH*5 + 125 * dieSize)
 //      let dScale = CGFloat(launchHeight*scaleLH + 125 * dieSize) // height of the box, so dice can never escape (right apple?)
         for node in self.rootNode.childNodes {
             if node.name! == "camera" {
@@ -760,7 +760,7 @@ class World: SCNScene, SCNPhysicsContactDelegate {
         let cameraY = (convert(d: CGFloat(30)) + Float(min(wScale,hScale))) / 2 / Float(tan(otherFOV)) // add 30 points at edge for border
         launchHeight = cameraY * 10 / 18  // launch dice below the camera
         launchHeight = min(8 * dieSize, launchHeight)
-        let dScale = CGFloat(launchHeight*scaleLH*5 + 45 * dieSize) // height of the box, so dice can never escape (right apple?)
+        let dScale = CGFloat(launchHeight*scaleLH*5 + 125 * dieSize) // height of the box, so dice can never escape (right apple?)
 //      let dScale = CGFloat(launchHeight*scaleLH + 125 * dieSize)
 //print("ar:\(ar), width:\(width), height:\(height)")
 //print("wS:\(wScale), hS:\(hScale), camera:\(cameraY), launchHeight:\(launchHeight), scaleLH:\(scaleLH), dScale:\(dScale)")

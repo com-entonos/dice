@@ -31,6 +31,7 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
     var pinch: UIPinchGestureRecognizer?
     var tripleTap: UITapGestureRecognizer?
     var singleTap: UITapGestureRecognizer?
+    var singleTap2: UITapGestureRecognizer?
     var doubleTap: UITapGestureRecognizer?
     var longTap: UILongPressGestureRecognizer?
     
@@ -95,6 +96,9 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
         
         flick = UIPanGestureRecognizer(target: self, action: #selector(handleFlick))
         _sceneView.addGestureRecognizer(flick!)
+        flick!.minimumNumberOfTouches = 1
+        flick!.maximumNumberOfTouches = 2
+        _sceneView.addGestureRecognizer(flick!)
         
         if tapOpt[3] != .ignore || _game.game_ == .freeplay {
             longTap = UILongPressGestureRecognizer(target: self, action: #selector(handleLongTap))
@@ -120,13 +124,22 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
         singleTap = UITapGestureRecognizer(target: self, action: #selector(handleTap))
         if tripleTap != nil { singleTap!.require(toFail: tripleTap!) }
         singleTap!.require(toFail: doubleTap!)
+        singleTap!.numberOfTouchesRequired = 1
         if longTap != nil { singleTap!.require(toFail: longTap!) }
         _sceneView.addGestureRecognizer(singleTap!)
+        
+        singleTap2 = UITapGestureRecognizer(target: self, action: #selector(handleTap))
+        singleTap2!.numberOfTouchesRequired = 2
+        if tripleTap != nil { singleTap2!.require(toFail: tripleTap!) }
+        singleTap2!.require(toFail: doubleTap!)
+        if longTap != nil { singleTap!.require(toFail: longTap!) }
+        _sceneView.addGestureRecognizer(singleTap2!)
         
     }
     
     func removeGestures() {
         if singleTap != nil { _sceneView.removeGestureRecognizer(singleTap!) }
+        if singleTap2 != nil { _sceneView.removeGestureRecognizer(singleTap2!) }
         _sceneView.removeGestureRecognizer(doubleTap!)
         if tripleTap != nil { _sceneView.removeGestureRecognizer(tripleTap!) }
         if longTap != nil { _sceneView.removeGestureRecognizer(longTap!) }
@@ -135,11 +148,12 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
     }
     
     @objc func handleLongTap(_ gestureRecognize: UIGestureRecognizer) {  // handle long tap (either long tap a die or table)
-        if gestureRecognize.state == .began {
+        if gestureRecognize.state == .ended {
+      //if gestureRecognize.state == .began {
             let pos = gestureRecognize.location(in: _sceneView) //CGPoint
             let hits = _sceneView.hitTest(pos, options: nil)
             if let object = hits.first?.node {
-                if !_game.longTapped(object,pos) && _game.game_ == .freeplay {  // try to do long tap on die, if we fail ...
+                if !_game.longTapped(object,pos, gestureRecognize.numberOfTouches > 1) && _game.game_ == .freeplay {  // try to do long tap on die, if we fail ...
                     if !allButton.isEnabled || pos.x < dieButtonPos.origin.x || pos.y < dieButtonPos.origin.y || pos.x > dieButtonPos.origin.x + dieButtonPos.width || pos.y > dieButtonPos.origin.y + dieButtonPos.height {
                         toggleDieButton()  // simply toggle dieButtons
                     } else {               // want to add
@@ -165,7 +179,7 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
             let pos = gestureRecognize.location(in: _sceneView) //CGPoint
             let hits = _sceneView.hitTest(pos, options: nil)
             if let object = hits.first?.node {
-                _game.doubleTapped(object,pos)
+                _game.doubleTapped(object,pos,gestureRecognize.numberOfTouches > 1)
             }
         }
     }
@@ -173,6 +187,7 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
     // for moving a die with swipes
     var movingDie : Dice? = nil
     var initialY = Float(-1)
+    var toggle = false
     
     // for tracking swipe itself for throw
     var numSample = CGFloat(0)
@@ -231,36 +246,42 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
     }
     @objc func handleFlick(_ gestureRecognize: UIPanGestureRecognizer,_ pos: CGPoint) { // handle flicking
         if gestureRecognize.state == .ended && movingDie == nil {  // done with swipe
+            toggle = toggle || gestureRecognize.numberOfTouches > 1
             trackSwipe(v: gestureRecognize.velocity(in: _sceneView), R: gestureRecognize.location(in: _sceneView))
             //print("end cumAng V R N: \(cumAng) \(aveSpeed) \(aveV) \(aveR) \(numSample) \(gestureRecognize.velocity(in: _sceneView))")
-            _game.flicked(aveV, pos: aveR, speed: aveSpeed, angle: cumAng)
+            _game.flicked(aveV, pos: aveR, speed: aveSpeed, angle: cumAng, toggle)
+            toggle = false
         } else if (gestureRecognize.state == .ended || gestureRecognize.state == .cancelled) && movingDie != nil  {
             if !(gestureRecognize.state == .cancelled) { helpMoveDie(die: movingDie!, pos: gestureRecognize.location(in: _sceneView)) }
             _world.movingDice(type: .static, movingDie: movingDie!)
             let r = movingDie!.presentation.simdPosition
             movingDie!.simdPosition = simd_float3(r.x, initialY, r.z)
             movingDie!.physicsBody!.resetTransform()
-            movingDie = nil; initialY = -1.0
+            movingDie = nil; initialY = -1.0; toggle = false
         } else if gestureRecognize.state == .began {  // moving dice or rolling?
             let startFlick = gestureRecognize.location(in: _sceneView)  // initial position of pan
             let hits = _sceneView.hitTest(startFlick, options: nil)
             if let object = hits.first?.node {      // get object we're touching
                 movingDie = object as? Dice         // are we on a die?
+                toggle = gestureRecognize.numberOfTouches > 1
                 if movingDie == nil { movingDie = _world.nearestDie(pos: startFlick, tolerance: 22) } // are we close to a die?
-                if movingDie == nil { // || _world.state == .rolling {  // we're swiping, keep track of it...
+                if movingDie == nil || toggle { // || _world.state == .rolling {  // we're swiping, keep track of it...
                     let v = gestureRecognize.velocity(in: _sceneView)
                     let ang = atan2(v.y, v.x)
                     cumAng = 0; numSample = 1; aveSpeed = sqrt(v.x*v.x+v.y*v.y); lastAngle = abs(ang); aveR = startFlick; aveV = v
                     movingDie = nil
+                    
                 } else {                                       // let's drag the die
                     _world.movingDice(type: .dynamic, movingDie: movingDie!)
                     helpMoveDie(die: movingDie!, pos: startFlick)
+                    toggle = false
                 }
             }
         } else if gestureRecognize.state == .changed {
             if movingDie != nil {   // moving the die
                 helpMoveDie(die: movingDie!, pos: gestureRecognize.location(in: _sceneView))
             } else {                // tracking the swipe
+                toggle = toggle || gestureRecognize.numberOfTouches > 1
                 trackSwipe(v: gestureRecognize.velocity(in: _sceneView), R: gestureRecognize.location(in: _sceneView))
             }
         }
@@ -271,7 +292,7 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
             let pos = gestureRecognize.location(in: _sceneView) //CGPoint
             let hits = _sceneView.hitTest(pos, options: nil)
             if let object = hits.first?.node {
-                _game.tripleTapped(object, pos)
+                _game.tripleTapped(object, pos, gestureRecognize.numberOfTouches > 1)
             }
         }
     }
@@ -281,9 +302,9 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
             let pos = gestureRecognize.location(in: _sceneView) //CGPoint
             let hits = _sceneView.hitTest(pos, options: nil)
             if let objectTap = hits.first?.node {
-                _game.tapped(objectTap, pos)
+                _game.tapped(objectTap, pos, gestureRecognize.numberOfTouches > 1)
             } else {
-                _game.tapped(pos)
+                _game.tapped(pos, gestureRecognize.numberOfTouches > 1)
             }
         }
     }

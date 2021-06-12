@@ -141,59 +141,59 @@ class Game {
         world.unholdDie(die: nil)
     }
     
-    func tapped(_ pos: CGPoint) {  // not needed
+    func tapped(_ pos: CGPoint, _ toggle: Bool = false) {  // not needed
     }
     
-    func tapped(_ objectTapped: SCNNode,_ pos: CGPoint) {  // something was single tapped
+    func tapped(_ objectTapped: SCNNode,_ pos: CGPoint, _ toggle: Bool = false) {  // something was single tapped
         var die = objectTapped as? Dice
         if die == nil { die = world.nearestDie(pos: pos, tolerance: 22) }
         if die != nil {    // a die?
-            doTapp(die!, pos: pos, tap: tapOpt[0])
+            doTapp(die!, pos: pos, tap: tapOpt[0], toggle)
         } else if world.numToRoll() > 0 && canThrow {       //tap table- roll dice (either all non-held or the selection)
             hud!.toRoll()
             timerPhysics?.invalidate()
-            world.roll(pos)
+            world.roll(pos, toggle)
         }
     }
     
-    func doubleTapped(_ objectTapped: SCNNode,_ pos: CGPoint) { // something was double tapped
+    func doubleTapped(_ objectTapped: SCNNode,_ pos: CGPoint, _ toggle: Bool = false) { // something was double tapped
         var die = objectTapped as? Dice
         if die == nil { die = world.nearestDie(pos: pos, tolerance: 22) }
         if die != nil {        // a die?
-            doTapp(die!, pos: pos, tap: tapOpt[1])
+            doTapp(die!, pos: pos, tap: tapOpt[1], toggle)
         } else { //double tap table                 // double tapped table, add a die
             addDie(objectTapped, pos)
         }
     }
     
-    func tripleTapped(_ objectTapped: SCNNode,_ pos: CGPoint) { // something was tripled tapped
+    func tripleTapped(_ objectTapped: SCNNode,_ pos: CGPoint,_ toggle: Bool = false) { // something was tripled tapped
         var die = objectTapped as? Dice
         if die == nil { die = world.nearestDie(pos: pos, tolerance: 22) }
         if die != nil {        // only a die can be tripled tapped
-            doTapp(die!, pos: pos, tap: tapOpt[2])
+            doTapp(die!, pos: pos, tap: tapOpt[2], toggle)
         }
     }
     
-    func longTapped(_ objectTapped: SCNNode,_ pos: CGPoint) -> Bool { // something was long tapped
+    func longTapped(_ objectTapped: SCNNode,_ pos: CGPoint, _ toggle: Bool = false) -> Bool { // something was long tapped
         var die = objectTapped as? Dice
         if die == nil { die = world.nearestDie(pos: pos, tolerance: 22) }
         if die != nil {        // only a die can be long tapped
-            doTapp(die!, pos: pos, tap: tapOpt[3])
+            doTapp(die!, pos: pos, tap: tapOpt[3], toggle)
             return true
         }
         return false
     }
     
-    func flicked(_ velOfFlick: CGPoint, pos: CGPoint, speed: CGFloat, angle: CGFloat) {   // we were 'flicked' - roll if dice are on the table
+    func flicked(_ velOfFlick: CGPoint, pos: CGPoint, speed: CGFloat, angle: CGFloat,_ toggle: Bool = false) {   // we were 'flicked' - roll if dice are on the table
         if world.numToRoll() > 0 && canThrow {
             hud!.toRoll()
             // set the direction and magnitude of throwing direction
             let psi = Float(atan2(velOfFlick.y, velOfFlick.x))  // direction of flick
             let fvel = Float(min(2.5, max(0.5, (2.5 - 0.5) * (speed - 200) / (4000.0 - 200.0) + 0.5)))   // scale over nominal speed
             let frot = Float(min(1.0, max(0.0, angle / (2 * CGFloat.pi))))                                  // how much in rotation vs translation
-            //print("fvel: \(fvel) \(frot) \(speed)")
+            //print("fvel: \(fvel) \(frot) \(speed) \(toggle)")
             timerPhysics?.invalidate()
-            world.roll(v: SCNVector3(x: fvel * max(0.25, 1 - frot) * cos(psi), y: 0, z: fvel * max(0.25,1 - frot) * sin(psi)), frot: max(0.75,frot * fvel), pos: pos)
+            world.roll(v: SCNVector3(x: fvel * max(0.25, 1 - frot) * cos(psi), y: 0, z: fvel * max(0.25,1 - frot) * sin(psi)), frot: max(0.75,frot * fvel), pos: pos, toggle)
         }
     }
     
@@ -205,13 +205,13 @@ class Game {
         }
     }
     
-    func doTapp(_ die: Dice, pos: CGPoint, tap: TapOptions) { // do whatever a single tap is suppose to do
+    func doTapp(_ die: Dice, pos: CGPoint, tap: TapOptions,_ toggle: Bool = false) { // do whatever a single tap is suppose to do
         if tap == .select  {
             selectDie(die)
         } else if tap == .remove {
             deleteDie(die)
         } else if tap == .roll  {
-            rollOneDie(die)
+            rollOneDie(die, toggle)
         } else if tap == .hold {
             holdDie(die)
         } else if tap == .duplicate {
@@ -247,12 +247,12 @@ class Game {
         }
     }
     
-    func rollOneDie(_ die: Dice) {  // want to roll just one die
+    func rollOneDie(_ die: Dice,_ toggle: Bool = false) {  // want to roll just one die
         if canThrowOne && !world.isHeld(die: die) {
             if game != .ship || (game == .ship && selectableDie.contains(die)) {
                 hud!.toRoll()
                 timerPhysics?.invalidate()
-                world.roll(die: die)
+                world.roll(die: die, toggle)
             }
         }
     }
