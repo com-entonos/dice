@@ -31,7 +31,7 @@ class SettingView : UIView, UIPickerViewDataSource, UIPickerViewDelegate, UIScro
     let dieOpt = ["Tiny", "Small", "Normal", "Large", "Huge"]
     let pulseOpt = ["On", "Off"]
     let energyOpt = ["Casual", "Nominal", "Excited"]
-    let launchOpt = ["Gatther", "Scatter"]
+    let launchOpt = ["Gather", "Scatter"]
     var defaultTap = [[TapOptions]]()
     
     init(frame: CGRect, safe: CGRect, game: Game) {
