@@ -342,7 +342,8 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
 
         //redo button
         //redoButton.frame = CGRect(x: 0, y: 54, width: 34, height: 34)
-        redoButton.frame = CGRect(x: 54, y: 2, width: 34, height: 34)
+        //redoButton.frame = CGRect(x: 54, y: 2, width: 34, height: 34)
+        redoButton.frame = CGRect(x: 0, y: 36, width: 34, height: 34)
         redoButton.backgroundColor = UIColor.clear
         redoButton.setImage(UIImage(named: "redo"), for: .normal)
         redoButton.contentVerticalAlignment = .fill; redoButton.contentHorizontalAlignment = .fill
