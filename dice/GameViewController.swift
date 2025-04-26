@@ -148,8 +148,8 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
     }
     
     @objc func handleLongTap(_ gestureRecognize: UIGestureRecognizer) {  // handle long tap (either long tap a die or table)
-        if gestureRecognize.state == .ended {
-      //if gestureRecognize.state == .began {
+      //if gestureRecognize.state == .ended {
+        if gestureRecognize.state == .began {
             let pos = gestureRecognize.location(in: _sceneView) //CGPoint
             let hits = _sceneView.hitTest(pos, options: nil)
             if let object = hits.first?.node {
