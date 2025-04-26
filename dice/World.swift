@@ -63,7 +63,7 @@ class World: SCNScene, SCNPhysicsContactDelegate {
     
     private var launchHeight : Float    // default height to throw dice
     private var scaleLH = Float(1)         // and it's scaling
-    private var _launchType = LaunchType.gather
+    private var _launchType = LaunchType.scatter
     
     private var running = 1             // a 'trick' to not exit .rolling state prematurely
     
@@ -793,7 +793,7 @@ class World: SCNScene, SCNPhysicsContactDelegate {
         let lightNode2 = SCNNode()
         lightNode2.light = light2
         
-        lightNode2.simdOrientation = simd_quatf(angle: 1.93205, axis: float3(-0.712484, 0.701689, 0))
+        lightNode2.simdOrientation = simd_quatf(angle: 1.93205, axis: SIMD3<Float>(-0.712484, 0.701689, 0))
 //print(lightNode2.simdOrientation.act(float3(0, 0, -1)))
         lightNode2.name = "spot light2"
         lightNode2.categoryBitMask = 16 //0x1 << 1 //4
