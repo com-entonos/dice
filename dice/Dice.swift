@@ -254,11 +254,13 @@ class Dice : SCNNode {
     
     /* functions for D2 */
     func value(up: simd_float3) -> Int {            // return value of face showing in the 'up' direction
-        if simd_dot(up, self.presentation.simdOrientation.act(float3(0, 1, 0))) > 0 { // tails is up
+        if simd_dot(up, self.presentation.simdOrientation.act(SIMD3<Float>(0, 1, 0))) > 0 { // tails is up
             return 0
         } else {
             return 1
         }
+        //let x = simd_dot(up,self.presentation.simdOrientation.act(SIMD3<Float>(0,1,0)))
+        //return x != 0.0 ? (x+abs(x))/(2.0*x) : 0
     }
 
 }
@@ -276,7 +278,7 @@ class Coin : Dice {  // coin, 2 sided die
         let phi = Float.random(in: 0.0...(2*Float.pi))
         
         // torque is applied in world coordinates, so transform from local to world
-        let n = self.simdOrientation.inverse.act(float3(cos(phi), 0, sin(phi)))
+        let n = self.simdOrientation.inverse.act(SIMD3<Float>(cos(phi), 0, sin(phi)))
 /*
         let m = dieInertia  // +- moment of inertia, impluse = delta Iw = I delta w
         let torque = SCNVector4(x: n.x * m.x, y: n.y * m.y, z: n.z * m.z, w: ( wOffset * (1 + Float.random(in: -0.3...0.3))))
@@ -333,7 +335,7 @@ class Coin : Dice {  // coin, 2 sided die
 class Tet: Dice {  // tetrahedron, 4 sided dice
     
     override func value(up: simd_float3) -> Int {            // return value of face showing in the 'up' direction
-        let norms: Array<float3> = [float3(0.46945852, 0.3441959, -0.8131041), float3(0.46944964, 0.34419796, 0.813108), float3(0, -1, 0), float3(-0.9388987, 0.34419358, 0)]
+        let norms: Array<SIMD3<Float>> = [SIMD3<Float>(0.46945852, 0.3441959, -0.8131041), SIMD3<Float>(0.46944964, 0.34419796, 0.813108), SIMD3<Float>(0, -1, 0), SIMD3<Float>(-0.9388987, 0.34419358, 0)]
         let q = self.presentation.simdOrientation   // a quaternion from reference to final orientation
         //        print(q.inverse.act(float3(0,-1,0)))
         var ic = 4
@@ -388,16 +390,16 @@ class Tet: Dice {  // tetrahedron, 4 sided dice
             /* faces (as pyramids) */
             parent.addChildNode(rot_trans(geometry: create_tri(length: size0, thickness: size0*0.02),
                                           x: simd_float3(-Float(size0)/sqrt(12),-Float(size0)/sqrt(24), 0),
-                                          r: simd_quatf(angle: Float.pi/2, axis: float3(0, 0, -1))))
+                                          r: simd_quatf(angle: Float.pi/2, axis: SIMD3<Float>(0, 0, -1))))
             parent.addChildNode(rot_trans(geometry: create_tri(length: size0, thickness: size0*0.02),
                                           x: simd_float3(-Float(size0)/sqrt(12),-Float(size0)/sqrt(24), 0),
-                                          r: simd_quatf(angle: Float.pi/2-acos(1/3), axis: float3(0, 0, -1))))
+                                          r: simd_quatf(angle: Float.pi/2-acos(1/3), axis: SIMD3<Float>(0, 0, -1))))
             parent.addChildNode(rot_trans(geometry: create_tri(length: size0, thickness: size0*0.02),
                                           x: simd_float3( Float(size0)/sqrt(48),-Float(size0)/sqrt(24),-Float(size0)/4),
-                                          r: simd_mul(simd_quatf(angle: Float.pi/2-acos(1/3), axis: float3(sqrt(3/4), 0, 0.5)), simd_quatf(angle: Float.pi/3, axis: float3(0, 1, 0)))))
+                                          r: simd_mul(simd_quatf(angle: Float.pi/2-acos(1/3), axis: SIMD3<Float>(sqrt(3/4), 0, 0.5)), simd_quatf(angle: Float.pi/3, axis: SIMD3<Float>(0, 1, 0)))))
             parent.addChildNode(rot_trans(geometry: create_tri(length: size0, thickness: size0*0.02),
                                           x: simd_float3( Float(size0)/sqrt(48),-Float(size0)/sqrt(24), Float(size0)/4),
-                                          r: simd_mul(simd_quatf(angle:-Float.pi/2+acos(1/3), axis: float3(sqrt(3/4), 0,-0.5)), simd_quatf(angle: Float.pi/3, axis: float3(0,-1, 0)))))
+                                          r: simd_mul(simd_quatf(angle:-Float.pi/2+acos(1/3), axis: SIMD3<Float>(sqrt(3/4), 0,-0.5)), simd_quatf(angle: Float.pi/3, axis: SIMD3<Float>(0,-1, 0)))))
             
             /* corners (as spheres) */
             let d = size0*0.05 //0.05
@@ -420,7 +422,7 @@ class Tet: Dice {  // tetrahedron, 4 sided dice
 class Oct: Dice {  //octahedron, 8 sided die
     override func value(up: simd_float3) -> Int {            // return value of face showing in the 'up' direction
         let a = Float(1/sqrt(3))
-        let norms: Array<float3> = [float3(-a, a, a), float3(-a,-a,-a), float3(-a, a,-a), float3(-a,-a, a)]
+        let norms: Array<SIMD3<Float>> = [SIMD3<Float>(-a, a, a), SIMD3<Float>(-a,-a,-a), SIMD3<Float>(-a, a,-a), SIMD3<Float>(-a,-a, a)]
         let q = self.presentation.simdOrientation   // a quaternion from reference to final orientation
         var ic = 8
         var c = Float(0.0)
@@ -458,13 +460,13 @@ class Oct: Dice {  //octahedron, 8 sided die
             
             let parent = SCNNode()
             let pyrNode1 = SCNNode(geometry: SCNPyramid(width: size0, height: size0/sqrt(2), length: size0))
-            pyrNode1.simdOrientation = simd_quatf(angle: Float.pi/4, axis: float3(0, 1, 0))
+            pyrNode1.simdOrientation = simd_quatf(angle: Float.pi/4, axis: SIMD3<Float>(0, 1, 0))
             let pyrNode2 = SCNNode(geometry: SCNPyramid(width: size0, height: size0/sqrt(2), length: size0))
-            pyrNode2.simdOrientation = simd_mul(simd_quatf(angle: Float.pi, axis: float3(1, 0, 0)) ,simd_quatf(angle: Float.pi/4, axis: float3(0, 1, 0)))
+            pyrNode2.simdOrientation = simd_mul(simd_quatf(angle: Float.pi, axis: SIMD3<Float>(1, 0, 0)) ,simd_quatf(angle: Float.pi/4, axis: SIMD3<Float>(0, 1, 0)))
             //let pyrNode2 = SCNNode(geometry: SCNPyramid(width: size0, height: -size0/sqrt(2), length: size0))
-            //pyrNode2.simdOrientation = simd_quatf(angle: Float.pi/4, axis: float3(0, 1, 0))
+            //pyrNode2.simdOrientation = simd_quatf(angle: Float.pi/4, axis: SIMD3<Float>(0, 1, 0))
             //let pyrNode2 = SCNNode(geometry: SCNPyramid(width: size0, height: size0/sqrt(2), length: size0))
-            //pyrNode2.simdOrientation = simd_quatf(angle: Float.pi/4, axis: float3(0, 1, 0))
+            //pyrNode2.simdOrientation = simd_quatf(angle: Float.pi/4, axis: SIMD3<Float>(0, 1, 0))
             //pyrNode2.simdScale = simd_float3(1, -1, 1)
             
             parent.addChildNode(pyrNode1)
@@ -482,11 +484,11 @@ class Oct: Dice {  //octahedron, 8 sided die
 
 class Dec: Dice {  // 10 sided die
     override func value(up: simd_float3) -> Int {            // return value of face showing in the 'up' direction
-        let norms: Array<float3> = [ float3( 0.42236373, 0.69545674, -0.58133376), float3(0.42236626, -0.6954555, 0.5813333),
-                                     float3(-0.6834008, 0.6954546, 0.22204992), float3(-0, -0.6954547, -0.71856993),
-                                     float3( 0, 0.6954537, 0.718571), float3(0.6833907, -0.6954652, -0.22204861),
-                                     float3(-0.42237106, 0.6954607, -0.5813236), float3(-0.42236203, -0.6954633, 0.5813272),
-                                     float3( 0.6832903, 0.6955215, 0.22218052), float3(-0.6833967, -0.69545895, -0.22204924)]
+        let norms: Array<SIMD3<Float>> = [ SIMD3<Float>( 0.42236373, 0.69545674, -0.58133376), SIMD3<Float>(0.42236626, -0.6954555, 0.5813333),
+                                     SIMD3<Float>(-0.6834008, 0.6954546, 0.22204992), SIMD3<Float>(-0, -0.6954547, -0.71856993),
+                                     SIMD3<Float>( 0, 0.6954537, 0.718571), SIMD3<Float>(0.6833907, -0.6954652, -0.22204861),
+                                     SIMD3<Float>(-0.42237106, 0.6954607, -0.5813236), SIMD3<Float>(-0.42236203, -0.6954633, 0.5813272),
+                                     SIMD3<Float>( 0.6832903, 0.6955215, 0.22218052), SIMD3<Float>(-0.6833967, -0.69545895, -0.22204924)]
         let q = self.presentation.simdOrientation   // a quaternion from reference to final orientation
         var ic = 10
         var c = Float(0.0)
@@ -558,8 +560,8 @@ class Dec: Dice {  // 10 sided die
 
 class Dod: Dice {  // dodecahedron, 12 sided die
     override func value(up: simd_float3) -> Int {            // return value of face showing in the 'up' direction
-        let norms: Array<float3> = [float3( 0.85065114, 0,-0.5257305),  float3( 0.5257283, -0.85065234, 0),  float3( 0,-0.5257289,-0.850652),
-                                    float3( 0.8506506, 0, 0.5257312),  float3( 0, 0.5257311, -0.8506508),  float3( 0.5257301, 0.85065144, 0)]
+        let norms: Array<SIMD3<Float>> = [SIMD3<Float>( 0.85065114, 0,-0.5257305),  SIMD3<Float>( 0.5257283, -0.85065234, 0),  SIMD3<Float>( 0,-0.5257289,-0.850652),
+                                    SIMD3<Float>( 0.8506506, 0, 0.5257312),  SIMD3<Float>( 0, 0.5257311, -0.8506508),  SIMD3<Float>( 0.5257301, 0.85065144, 0)]
         let q = self.presentation.simdOrientation   // a quaternion from reference to final orientation
         //print(q.inverse.act(float3(0, 1, 0)))
         var ic = 12
@@ -635,10 +637,10 @@ class Dod: Dice {  // dodecahedron, 12 sided die
 
 class Ico: Dice {  // icosahedron, 20 sided die
     override func value(up: simd_float3) -> Int {            // return value of face showing in the 'up' direction
-        let norms: Array<float3> = [float3(-0.3035525, 0.18758848,-0.93416613),  float3(0.491112, 0.7946592, 0.3568272),     float3(0.60707474, -0.794645, 0),
-                                    float3(-0.9822479, 0.18758817, 0),           float3(-0.3035398, 0.18758985, 0.93417007), float3(-0.1875706, 0.794651,-0.57736224),
-                                    float3(0.18760364, -0.79464245, -0.5773632), float3(0.7946621, 0.18758227, -0.5773431),  float3(-0.4910938, -0.79467565, 0.35681581),
-                                    float3(0.79466665, 0.18755808, 0.5773447)]
+        let norms: Array<SIMD3<Float>> = [SIMD3<Float>(-0.3035525, 0.18758848,-0.93416613),  SIMD3<Float>(0.491112, 0.7946592, 0.3568272),     SIMD3<Float>(0.60707474, -0.794645, 0),
+                                    SIMD3<Float>(-0.9822479, 0.18758817, 0),           SIMD3<Float>(-0.3035398, 0.18758985, 0.93417007), SIMD3<Float>(-0.1875706, 0.794651,-0.57736224),
+                                    SIMD3<Float>(0.18760364, -0.79464245, -0.5773632), SIMD3<Float>(0.7946621, 0.18758227, -0.5773431),  SIMD3<Float>(-0.4910938, -0.79467565, 0.35681581),
+                                    SIMD3<Float>(0.79466665, 0.18755808, 0.5773447)]
         let q = self.presentation.simdOrientation   // a quaternion from reference to final orientation
         var ic = 20
         var c = Float(0.0)
