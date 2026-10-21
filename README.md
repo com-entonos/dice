@@ -1,4 +1,4 @@
-<b>dice (ProDice)</b><br>
+<b>dice (Dice Pro Simulator)</b><br>
 ![diceIcon1024](https://user-images.githubusercontent.com/51520928/113064310-9dce4000-916b-11eb-9263-33a2c59ed35c.png)
 
 dice is an iOS application (called "ProDice" on App Store) that uses SceneKit to do the physics of rolling various dice: coins, d4, d6, d8, d10, d12 and d20. 
