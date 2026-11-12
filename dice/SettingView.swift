@@ -39,45 +39,45 @@ class SettingView : UIView, UIPickerViewDataSource, UIPickerViewDelegate, UIScro
         super.init(frame: frame)
         self.backgroundColor = #colorLiteral(red: 0.7843137255, green: 0.7843137255, blue: 0.7843137255, alpha: 1) //#colorLiteral(red: 0.8313021064, green: 0.8314192891, blue: 0.8312650919, alpha: 1) #colorLiteral(red: 0.9254121184, green: 0.9255419374, blue: 0.9253712296, alpha: 1) #colorLiteral(red: 0.9488393664, green: 0.9491292834, blue: 0.9530405402, alpha: 1)
         
-        let tapWidth =  (safe.width-110 < 540) ? safe.width-110 : CGFloat(540)
+        let labelW: CGFloat = min(100, safe.width * 0.25)
+        let gap: CGFloat = 10
+        let tapWidth = max(180, min(540, safe.width - labelW - gap - 16))
+        let dw = max(8, (safe.width - (labelW + gap + tapWidth)) / 2)
+        let ctrlX = dw + labelW + gap
         
-        let dw = max(0, (safe.width - tapWidth)/2 - 110)
-//print(tapWidth,dw,safe)
-        //if safe.origin.x == 0 { dw = max(0, (safe.width - 100 - tapWidth)/2 - 110) }
+        let diceW = min(400, tapWidth)
+        let medW = min(300, tapWidth)
+        let launchW = min(200, tapWidth)
         
-        gamePicker.frame =    CGRect(x: dw+110 + (tapWidth-250)/2, y: 0, width: 250, height: 150)
-        tapPicker.frame =     CGRect(x: dw+110,                    y: 165, width: tapWidth, height: 150)
-        diceSegment.frame =   CGRect(x: dw+110 + (tapWidth-400)/2, y: 330, width: 400, height: 35)
-        energySegment.frame = CGRect(x: dw+110 + (tapWidth-300)/2, y: 380, width: 300, height: 35)
-        pulseSwitch.frame =   CGRect(x: dw+110 + (tapWidth-70)/2,  y: 430, width: 70, height: 35)
-        undoSegment.frame =   CGRect(x: dw+110 + (tapWidth-300)/2, y: 480, width: 300, height: 35)
-        historySwitch.frame = CGRect(x: dw+110 + (tapWidth-70)/2,  y: 530, width: 70, height: 35)
-        launchSegment.frame = CGRect(x: dw+100 + (tapWidth-200)/2, y: 580, width: 200, height: 35)
+        gamePicker.frame =    CGRect(x: ctrlX + (tapWidth - min(250, tapWidth)) / 2, y: 0, width: min(250, tapWidth), height: 150)
+        tapPicker.frame =     CGRect(x: ctrlX, y: 165, width: tapWidth, height: 150)
+        diceSegment.frame =   CGRect(x: ctrlX + (tapWidth - diceW) / 2, y: 330, width: diceW, height: 35)
+        energySegment.frame = CGRect(x: ctrlX + (tapWidth - medW) / 2, y: 380, width: medW, height: 35)
+        pulseSwitch.frame =   CGRect(x: ctrlX + (tapWidth - 70) / 2, y: 430, width: 70, height: 35)
+        undoSegment.frame =   CGRect(x: ctrlX + (tapWidth - medW) / 2, y: 480, width: medW, height: 35)
+        historySwitch.frame = CGRect(x: ctrlX + (tapWidth - 70) / 2, y: 530, width: 70, height: 35)
+        launchSegment.frame = CGRect(x: ctrlX + (tapWidth - launchW) / 2, y: 580, width: launchW, height: 35)
         
-        let label1 = UILabel(frame: CGRect(x: dw+0, y: 0, width: 100, height: 150)); label1.text = "Game:";         label1.font = .systemFont(ofSize: 18); label1.textAlignment = .right
-        let label4 = UILabel(frame: CGRect(x: dw+100, y: 125, width: tapWidth, height: 100)); label4.text = "single tap          double tap           triple tap            long tap               pinch"//; label4.textColor = .black;
-        label4.font = .systemFont(ofSize: 15); label4.textAlignment = .center
-        let label3 = UILabel(frame: CGRect(x: dw+0, y: 165, width: 100, height: 150)); label3.text = "Die action:"; label3.font = .systemFont(ofSize: 18); label3.textAlignment = .right
-        let label2 = UILabel(frame: CGRect(x: dw+0, y: 330, width: 100, height: 35)); label2.text = "Dice size:";  label2.font = .systemFont(ofSize: 18); label2.textAlignment = .right
-        let label7 = UILabel(frame: CGRect(x: dw+0, y: 380, width: 100, height: 35)); label7.text = "Throw:";      label7.font = .systemFont(ofSize: 18); label7.textAlignment = .right
-        let label6 = UILabel(frame: CGRect(x: dw+0, y: 430, width: 100, height: 35)); label6.text = "Pulse dice:"; label6.font = .systemFont(ofSize: 18); label6.textAlignment = .right
-        let label5 = UILabel(frame: CGRect(x: dw+0, y: 480, width: 150, height: 35)); label5.text = "Number of undo:"; label5.font = .systemFont(ofSize: 18)
-        let label8 = UILabel(frame: CGRect(x: dw+0, y: 530, width: 100, height: 35)); label8.text = "History:"; label8.font = .systemFont(ofSize: 18); label8.textAlignment = .right
-        let label9 = UILabel(frame: CGRect(x: dw+0, y: 580, width: 100, height: 35)); label9.text = "Launch:"; label9.font = .systemFont(ofSize: 18); label9.textAlignment = .right
+        let label1 = UILabel(frame: CGRect(x: dw, y: 0, width: labelW, height: 150)); label1.text = "Game:"; label1.font = .systemFont(ofSize: 18); label1.textAlignment = .right
+        let label4 = UILabel(frame: CGRect(x: ctrlX, y: 125, width: tapWidth, height: 100)); label4.text = "single tap   double tap   triple tap   long tap   pinch"
+        label4.font = .systemFont(ofSize: 13); label4.textAlignment = .center; label4.adjustsFontSizeToFitWidth = true
+        let label3 = UILabel(frame: CGRect(x: dw, y: 165, width: labelW, height: 150)); label3.text = "Die action:"; label3.font = .systemFont(ofSize: 18); label3.textAlignment = .right
+        let label2 = UILabel(frame: CGRect(x: dw, y: 330, width: labelW, height: 35)); label2.text = "Dice size:"; label2.font = .systemFont(ofSize: 18); label2.textAlignment = .right
+        let label7 = UILabel(frame: CGRect(x: dw, y: 380, width: labelW, height: 35)); label7.text = "Throw:"; label7.font = .systemFont(ofSize: 18); label7.textAlignment = .right
+        let label6 = UILabel(frame: CGRect(x: dw, y: 430, width: labelW, height: 35)); label6.text = "Pulse dice:"; label6.font = .systemFont(ofSize: 18); label6.textAlignment = .right
+        let label5 = UILabel(frame: CGRect(x: dw, y: 480, width: labelW + 40, height: 35)); label5.text = "Number of undo:"; label5.font = .systemFont(ofSize: 16); label5.adjustsFontSizeToFitWidth = true
+        let label8 = UILabel(frame: CGRect(x: dw, y: 530, width: labelW, height: 35)); label8.text = "History:"; label8.font = .systemFont(ofSize: 18); label8.textAlignment = .right
+        let label9 = UILabel(frame: CGRect(x: dw, y: 580, width: labelW, height: 35)); label9.text = "Launch:"; label9.font = .systemFont(ofSize: 18); label9.textAlignment = .right
         
-        let doneButton = UIButton(type: .system) //UIButton()
-        let donateButton = UIButton(type: .system) //UIButton()
-        if safe.origin.x == 0 {
-            doneButton.frame = CGRect(x: safe.width - 160, y: safe.height-50, width: 110, height: 40)
-            donateButton.frame = CGRect(x: 40, y: safe.height-50, width: 200, height: 40)
-        } else {
-            doneButton.frame = CGRect(x: safe.origin.x + safe.width - 160, y: safe.origin.y + safe.height-50, width: 160, height: 40)
-            donateButton.frame = CGRect(x: safe.origin.x, y: safe.origin.y + safe.height-50, width: 200, height: 40)
-        }
+        let doneButton = UIButton(type: .system)
+        let donateButton = UIButton(type: .system)
+        let btnMargin: CGFloat = max(16, 40 - safe.origin.x)
+        doneButton.frame = CGRect(x: safe.origin.x + safe.width - btnMargin - 120, y: safe.origin.y + safe.height - 50, width: 120, height: 40)
+        donateButton.frame = CGRect(x: safe.origin.x + btnMargin, y: safe.origin.y + safe.height - 50, width: 200, height: 40)
 
         scrollView.contentSize = CGSize(width: safe.width, height: 625)
-        settingView.frame = CGRect(x: 0, y: 0, width: safe.width, height: 600)
-        scrollView.frame = CGRect(x: safe.origin.x, y: 0, width: safe.width, height: safe.height-60)
+        settingView.frame = CGRect(x: 0, y: 0, width: safe.width, height: 625)
+        scrollView.frame = CGRect(x: safe.origin.x, y: safe.origin.y, width: safe.width, height: safe.height - 60)
         settingView.translatesAutoresizingMaskIntoConstraints = false
         settingView.backgroundColor = UIColor.clear
 
@@ -162,7 +162,8 @@ class SettingView : UIView, UIPickerViewDataSource, UIPickerViewDelegate, UIScro
         doneButton.setTitle("Let's Play!", for: .normal)
         doneButton.titleLabel?.font = UIFont(name: "Arial", size: 18)
         doneButton.titleLabel?.textAlignment = .right
-        doneButton.addTarget(self.superview, action: #selector(GameViewController.donePressed), for: .touchUpInside)
+        doneButton.addTarget(nil, action: #selector(GameViewController.donePressed), for: .touchUpInside)
+        //doneButton.addTarget(self.superview, action: #selector(GameViewController.donePressed), for: .touchUpInside)
         
         donateButton.backgroundColor = UIColor.clear
         //donateButton.setTitle("Donate", for: .normal)

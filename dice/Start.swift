@@ -46,9 +46,13 @@ class StartView : UIView, UIPickerViewDataSource, UIPickerViewDelegate, UIScroll
     
     init(frame: CGRect, safe: CGRect, game: Game) {
         
-        let dw = (safe.origin.x > 0) ? safe.origin.x : 50
-        let dh = safe.height / 3 //4
-        let w = safe.width - dw*2
+        //let dw = (safe.origin.x > 0) ? safe.origin.x : 50
+        //let dh = safe.height / 3 //4
+        //let w = safe.width - dw*2
+        let margin: CGFloat = max(16, 40 - safe.origin.x)
+        let dw = safe.origin.x + margin
+        let dh = safe.height / 3
+        let w = safe.width - margin * 2
         self.games = game.gameNames()
         self.games.insert("Choose a game...", at: 0)
         self.maxDescSize = CGSize(width: w, height: 2000)
@@ -123,7 +127,8 @@ class StartView : UIView, UIPickerViewDataSource, UIPickerViewDelegate, UIScroll
         dismissButton.frame = frame
         dismissButton.backgroundColor = .clear
         dismissButton.setTitle("", for: .normal)
-        dismissButton.addTarget(self.superview, action: #selector(GameViewController.donePressed), for: .touchUpInside)
+        dismissButton.addTarget(nil, action: #selector(GameViewController.donePressed), for: .touchUpInside)
+        //dismissButton.addTarget(self.superview, action: #selector(GameViewController.donePressed), for: .touchUpInside)
         self.addSubview(dismissButton)
         dismissButton.isEnabled = false
         dismissButton.isHidden = true
