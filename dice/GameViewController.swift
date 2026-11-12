@@ -151,7 +151,7 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
         _sceneView.addGestureRecognizer(flick!)
         flick!.minimumNumberOfTouches = 1
         flick!.maximumNumberOfTouches = 2
-        _sceneView.addGestureRecognizer(flick!)
+        //_sceneView.addGestureRecognizer(flick!)
         
         if tapOpt[3] != .ignore || _game.game_ == .freeplay {
             longTap = UILongPressGestureRecognizer(target: self, action: #selector(handleLongTap))
@@ -185,7 +185,7 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
         singleTap2!.numberOfTouchesRequired = 2
         if tripleTap != nil { singleTap2!.require(toFail: tripleTap!) }
         singleTap2!.require(toFail: doubleTap!)
-        if longTap != nil { singleTap!.require(toFail: longTap!) }
+        if longTap != nil { singleTap2!.require(toFail: longTap!) }
         _sceneView.addGestureRecognizer(singleTap2!)
         
     }
