@@ -265,9 +265,33 @@ class World: SCNScene, SCNPhysicsContactDelegate {
                 var allStop = false // all stopped moving/rotatin, essentially?
                 for die in _dice {  // loop over all dice
                     if die.physicsBody?.type == .dynamic {  // we might be doing animation to move dice around, so don't get confused.
+                        
+                        // force no die escape the table box...
+                        var r = die.presentation.simdPosition
+                        var v = die.physicsBody!.velocity
+                        let pad = die.circumR
+                        let maxX = Float(wScale / 2) - pad
+                        let maxZ = Float(hScale / 2) - pad
+                        let maxY = Float(dScale) - pad
+                        var escaped = false
+
+                        if r.x < -maxX { r.x = -maxX; v.x = abs(v.x) * Float(0.9); escaped = true }
+                        else if r.x > maxX { r.x = maxX; v.x = -abs(v.x) * Float(0.9); escaped = true }
+
+                        if r.z < -maxZ { r.z = -maxZ; v.z = abs(v.z) * Float(0.9); escaped = true }
+                        else if r.z > maxZ { r.z = maxZ; v.z = -abs(v.z) * Float(0.9); escaped = true }
+
+                        if r.y < 0 { r.y = pad; v.y = abs(v.y) * 0.1; escaped = true }
+                        else if r.y > maxY { r.y = maxY; v.y = -abs(v.y) * 0.5; escaped = true }
+
+                        if escaped {
+                            die.simdPosition = r
+                            die.physicsBody!.velocity = v
+                            die.physicsBody!.resetTransform()
+                        }
+                        
                         let y = die.presentation.simdPosition.y
                         if y > launchHeight/4 { startTime = time }
-                        let v = die.physicsBody!.velocity  // get linear velocity
                         let I = die.inertiaByMass
                         let w = die.physicsBody!.angularVelocity
                         if v.x * v.x + v.y * v.y + v.z * v.z + (w.x*I.x*w.x + w.y*I.y*w.y + w.z*I.z*w.z)*w.w*w.w > max(1e-4,2*9.8*(die.midR-y)) {
@@ -818,7 +842,7 @@ class World: SCNScene, SCNPhysicsContactDelegate {
         floorGeometry.reflectionCategoryBitMask = 1 //0x1 << 2
         
         //second floor (in case the die goes through the floor
-        let floorNode1 = SCNNode(geometry: floorGeometry)
+        /*let floorNode1 = SCNNode(geometry: floorGeometry)
         floorNode1.physicsBody = SCNPhysicsBody(type: .static, shape: nil)
         floorNode1.physicsBody?.friction = 1.0
         floorNode1.physicsBody?.restitution = 0.1
@@ -826,7 +850,7 @@ class World: SCNScene, SCNPhysicsContactDelegate {
         floorNode1.position = SCNVector3(x: 0, y: Float(-2*dieSize), z: 0)
         floorNode1.name = "second-floor"
         floorNode1.categoryBitMask = 2+4 //0x1 << 2
-        floorGeometry.reflectionCategoryBitMask = 0//1//0x1 << 0
+        floorGeometry.reflectionCategoryBitMask = 0//1//0x1 << 0*/
         
         //lid
         let lidGeometry = SCNPlane(width: wScale * 5, height: hScale * 5)
