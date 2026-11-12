@@ -580,7 +580,7 @@ class Dod: Dice {  // dodecahedron, 12 sided die
         
         self.dieLength = size * 1.4
         let size0 = size * 0.5569 * 0.95
-        self.dieMass = dieDensity * size0 * size0 * size0 * (15+7*sqrt(5)) / 4 //* 1000000
+        self.dieMass = dieDensity * size0 * size0 * size0 * CGFloat((15.0+7.0*sqrt(5.0)) / 4) //* 1000000
         //self.dieMass = dieDensity * size * size * size //* 1000000
         self.dieInertia = simd_float3(1, 1, 1) * Float(self.dieMass * size0 * size0 * 3 / 5)
         
