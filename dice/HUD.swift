@@ -104,7 +104,7 @@ class HUD {
         bottomright.fontColor = color
         bottomright.isHidden = false
     }
-    func result(_ string: NSMutableAttributedString) {
+    /*func result(_ string: NSMutableAttributedString) {
         resultLabel.attributedText = string
         let x = resultLabel.intrinsicContentSize
         let r = x.height * ceil(x.width / resultLabel.frame.width)
@@ -112,15 +112,13 @@ class HUD {
         resultLabel.frame.origin.y = _scene.frame.height - r + 2.5
         resultLabel.isHidden = false
 //print(resultLabel.intrinsicContentSize,resultLabel.frame)
-        
-    }
+    }*/
 
     init(size: CGRect) {
         //print("size: \(size)")
         _scene = SKScene(size: size.size)
         
         // test PASS or FAIL
-        message.position = CGPoint(x: size.width/2, y: size.height/2)
         message.horizontalAlignmentMode = .center
         message.fontName = "Arial"
         message.fontSize = 80
@@ -128,7 +126,6 @@ class HUD {
         message.isHidden = true
         _scene.addChild(message)
 
-        info.position = CGPoint(x: size.width/2, y: size.height/2-35)
         info.horizontalAlignmentMode = .center
         info.fontName = "Arial"
         info.fontSize = 32
@@ -136,7 +133,6 @@ class HUD {
         info.isHidden = true
         _scene.addChild(info)
         
-        topcenter.position = CGPoint(x: size.width/2, y: size.height-0)
         topcenter.horizontalAlignmentMode = .center
         topcenter.verticalAlignmentMode = .top
         topcenter.fontName = "Arial"
@@ -145,7 +141,6 @@ class HUD {
         topcenter.isHidden = true
         _scene.addChild(topcenter)
         
-        topright.position = CGPoint(x: size.width-32, y: size.height-0)
         topright.horizontalAlignmentMode = .right
         topright.verticalAlignmentMode = .top
         topright.fontName = "Arial"
@@ -154,7 +149,6 @@ class HUD {
         topright.isHidden = true
         _scene.addChild(topright)
         
-        topleft.position = CGPoint(x: 32, y: size.height-0)
         topleft.horizontalAlignmentMode = .left
         topleft.verticalAlignmentMode = .top
         topleft.fontName = "Arial"
@@ -163,7 +157,6 @@ class HUD {
         topleft.isHidden = true
         _scene.addChild(topleft)
         
-        bottomleft.position = CGPoint(x: 32, y: 0)
         bottomleft.horizontalAlignmentMode = .left
         bottomleft.verticalAlignmentMode = .bottom
         bottomleft.fontName = "Arial"
@@ -172,7 +165,6 @@ class HUD {
         bottomleft.isHidden = true
         _scene.addChild(bottomleft)
         
-        bottomcenter.position = CGPoint(x: size.width/2, y: 0)
         bottomcenter.horizontalAlignmentMode = .center
         bottomcenter.verticalAlignmentMode = .bottom
         bottomcenter.fontName = "Arial"
@@ -181,7 +173,6 @@ class HUD {
         bottomcenter.isHidden = true
         _scene.addChild(bottomcenter)
         
-        bottomright.position = CGPoint(x: size.width-32, y: 0)
         bottomright.horizontalAlignmentMode = .right
         bottomright.verticalAlignmentMode = .bottom
         bottomright.fontName = "Arial"
@@ -193,12 +184,61 @@ class HUD {
         resultLabel.textAlignment = .center
         resultLabel.textColor = .white
         resultLabel.font = UIFont(name: "Arial", size: 20)
-        resultLabel.frame = CGRect(x: 32, y: size.height-20, width: size.width-64, height: 20)
         resultLabel.numberOfLines = 0
         resultLabel.lineBreakMode = .byWordWrapping
         
+        layout(viewBounds: size, safeArea: size)
         hudState = .empty
         toClear()
     }
+    private var viewSize = CGSize.zero
+    private var safeRect = CGRect.zero
+
+    func result(_ string: NSMutableAttributedString) {
+        resultLabel.attributedText = string
+        let x = resultLabel.intrinsicContentSize
+        let r = x.height * ceil(x.width / max(1, resultLabel.frame.width))
+        resultLabel.frame.size.height = r
+        // Align to the bottom of the safe area in UIKit coordinates
+        resultLabel.frame.origin.y = safeRect.maxY - r + 2.5
+        resultLabel.isHidden = false
+    }
+
+    func resize(viewBounds: CGRect, safeArea: CGRect) {
+        guard viewBounds.width > 0 && viewBounds.height > 0 else { return }
+        _scene.size = viewBounds.size
+        layout(viewBounds: viewBounds, safeArea: safeArea)
+    }
+
+    private func layout(viewBounds: CGRect, safeArea: CGRect) {
+        self.viewSize = viewBounds.size
+        self.safeRect = safeArea
+
+        // Convert UIKit safeArea (top-left origin) to SpriteKit coordinates (bottom-left origin)
+        let skLeft = safeArea.minX
+        let skRight = safeArea.maxX
+        let skMidX = safeArea.midX
+        let skTop = viewBounds.height - safeArea.minY
+        let skBottom = viewBounds.height - safeArea.maxY
+        let skMidY = (skTop + skBottom) / 2
+
+        message.position = CGPoint(x: skMidX, y: skMidY)
+        info.position = CGPoint(x: skMidX, y: skMidY - 35)
+
+        topcenter.position = CGPoint(x: skMidX, y: skTop)
+        topright.position = CGPoint(x: skRight - 32, y: skTop)
+        topleft.position = CGPoint(x: skLeft + 32, y: skTop)
+
+        bottomleft.position = CGPoint(x: skLeft + 32, y: skBottom)
+        bottomcenter.position = CGPoint(x: skMidX, y: skBottom)
+        bottomright.position = CGPoint(x: skRight - 32, y: skBottom)
+
+        // UIKit resultLabel uses standard top-left coordinates
+        resultLabel.frame = CGRect(x: safeArea.minX + 32, y: safeArea.maxY - 20, width: max(64, safeArea.width - 64), height: 20)
+        if !resultLabel.isHidden, let attr = resultLabel.attributedText {
+            result(NSMutableAttributedString(attributedString: attr))
+        }
+    }
+
 }
 
