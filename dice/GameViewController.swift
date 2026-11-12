@@ -53,13 +53,16 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
     
     override func viewDidAppear(_ animated: Bool) {  // ok, 'safe areas' are now defined,
         super.viewDidAppear(animated)
+        if _game != nil { return }
         
         overlayBounds = self.view.safeAreaLayoutGuide.layoutFrame
         
         _game = Game(size: overlayBounds) // create the Game (which creates the HUD and World)
         _world = _game.world_
         
-        _sceneView = SCNView(frame: overlayBounds)  // create a SCNView
+        //_sceneView = SCNView(frame: overlayBounds)  // create a SCNView
+        _sceneView = SCNView(frame: self.view.bounds) // <-- CHANGE from overlayBounds
+        _sceneView.autoresizingMask = [.flexibleWidth, .flexibleHeight] // <-- ADD
         _sceneView.scene = _world                   // and populate it w/ the World
         _sceneView.allowsCameraControl = false
         _sceneView.showsStatistics = false
@@ -85,6 +88,56 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
             self.view.addSubview(startView!)
         }
     
+    }
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        guard _sceneView != nil, _game != nil, _world != nil else { return }
+        
+        _sceneView.frame = self.view.bounds
+        
+        let newBounds = self.view.safeAreaLayoutGuide.layoutFrame
+        guard newBounds != overlayBounds && newBounds.width > 0 && newBounds.height > 0 else { return }
+        overlayBounds = newBounds
+        
+        _world.resize(to: overlayBounds)
+        _game.hud?.resize(viewBounds: self.view.bounds, safeArea: overlayBounds)
+        layoutButtons()
+        
+        if startView != nil || settingView != nil || diceNumberView != nil ||
+           diceSetView != nil || helpView != nil || helpDetailView != nil || historyView != nil {
+            donePressed(sender: nil)
+        }
+    }
+
+    
+    func layoutButtons() {
+        let ox = overlayBounds.origin.x
+        let oy = overlayBounds.origin.y
+        let ow = overlayBounds.width
+        let oh = overlayBounds.height
+        
+        soundButton.frame = CGRect(x: ox + ow - 39, y: oy, width: 34, height: 34)
+        settingButton.frame = CGRect(x: ox, y: oy + oh - 34, width: 34, height: 34)
+        historyButton.frame = CGRect(x: ox, y: oy + oh - 70, width: 34, height: 34)
+        helpButton.frame = CGRect(x: ox + ow - 34, y: oy + oh - 34, width: 34, height: 34)
+        undoButton.frame = CGRect(x: ox, y: oy + 2, width: 34, height: 34)
+        redoButton.frame = CGRect(x: ox, y: oy + 36, width: 34, height: 34)
+        
+        guard !dieButton.isEmpty else { return }
+        let y0 = oy + 54
+        let dyy = (oh - 44 - 54) / CGFloat(DieType.allCases.count + 1)
+        let dy = (dyy < 65) ? dyy : 65
+        let sz = dy * 50/65
+        let x0 = ox + ow - sz
+        dieButtonPos = CGRect(x: x0, y: y0, width: sz, height: dy * CGFloat(DieType.allCases.count))
+        for (i, type) in DieType.allCases.enumerated() {
+            dieButton[type]?.frame = CGRect(x: x0, y: y0 + dy * CGFloat(i), width: sz, height: sz)
+        }
+        allButton.frame = CGRect(x: x0, y: y0 + dy * CGFloat(DieType.allCases.count), width: sz, height: sz)
+    }
+
+    private func safePos(_ pos: CGPoint) -> CGPoint {
+        return CGPoint(x: pos.x - overlayBounds.origin.x, y: pos.y - overlayBounds.origin.y)
     }
     
     func renderer(_ renderer: SCNSceneRenderer, didSimulatePhysicsAtTime time: TimeInterval) {
@@ -153,7 +206,7 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
             let pos = gestureRecognize.location(in: _sceneView) //CGPoint
             let hits = _sceneView.hitTest(pos, options: nil)
             if let object = hits.first?.node {
-                if !_game.longTapped(object,pos, gestureRecognize.numberOfTouches > 1) && _game.game_ == .freeplay {  // try to do long tap on die, if we fail ...
+                if !_game.longTapped(object,safePos(pos), gestureRecognize.numberOfTouches > 1) && _game.game_ == .freeplay {  // try to do long tap on die, if we fail ...
                     if !allButton.isEnabled || pos.x < dieButtonPos.origin.x || pos.y < dieButtonPos.origin.y || pos.x > dieButtonPos.origin.x + dieButtonPos.width || pos.y > dieButtonPos.origin.y + dieButtonPos.height {
                         toggleDieButton()  // simply toggle dieButtons
                     } else {               // want to add
@@ -162,7 +215,7 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
                         for (i,type) in DieType.allCases.enumerated() {
                             if ind == i { dieType = type; break}
                         }
-                        diceNumberView = DiceNumberView(frame: self.view.frame, safe: overlayBounds, image: smallIcon[dieType]!, add: true)
+                        diceNumberView = DiceNumberView(frame: self.view.bounds, safe: overlayBounds, image: smallIcon[dieType]!, add: true)
                         if diceNumberView != nil {
                             removeGestures()
                             self.view.addSubview(diceNumberView!)
@@ -179,7 +232,7 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
             let pos = gestureRecognize.location(in: _sceneView) //CGPoint
             let hits = _sceneView.hitTest(pos, options: nil)
             if let object = hits.first?.node {
-                _game.doubleTapped(object,pos,gestureRecognize.numberOfTouches > 1)
+                _game.doubleTapped(object,safePos(pos),gestureRecognize.numberOfTouches > 1)
             }
         }
     }
@@ -200,7 +253,7 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
     func helpMoveDie(die: Dice, pos: CGPoint) { // continuously update position of moving die
         let r = die.presentation.simdPosition
         if initialY < 0 {initialY = r.y}
-        die.simdPosition = simd_float3(0, 1.5*initialY, 0) + _world.convert(pos: pos)
+        die.simdPosition = simd_float3(0, 1.5*initialY, 0) + _world.convert(pos: safePos(pos))
         die.physicsBody!.resetTransform()
     }
     func trackSwipe(v: CGPoint, R: CGPoint) {  // keep cumulative angle change (hack) and average speed and position of swipe
@@ -217,7 +270,7 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
                 if movingDie != nil && gestureRecognize.scale < numSample {
                     let pos = gestureRecognize.location(in: _sceneView)
                     let hits = _sceneView.hitTest(pos, options: nil)
-                    if let die = hits.first?.node as? Dice { _game.pinched(die, pos) } else { _game.pinched(movingDie!, aveR) }
+                    if let die = hits.first?.node as? Dice { _game.pinched(die, safePos(pos)) } else { _game.pinched(movingDie!, safePos(aveR)) }
                 }
                 movingDie = nil; initialY = -1.0
                 for die in _world.dice { die.physicsBody?.type = .static }
@@ -228,7 +281,7 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
                 let hits = _sceneView.hitTest(pos, options: nil)
                 if let object = hits.first?.node {      // get object we're touching (centroid)
                     movingDie = object as? Dice         // are we on a die?
-                    if movingDie == nil { movingDie = _world.nearestDie(pos: pos, tolerance: 22) } // are we close to a die?
+                    if movingDie == nil { movingDie = _world.nearestDie(pos: safePos(pos), tolerance: 22) } // are we close to a die?
                     let tapOpt = _game.throwOption
                     if movingDie != nil && tapOpt[4] != .ignore {   // there is a die and pinch is a die action
                         aveR = pos
@@ -249,7 +302,7 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
             toggle = toggle || gestureRecognize.numberOfTouches > 1
             trackSwipe(v: gestureRecognize.velocity(in: _sceneView), R: gestureRecognize.location(in: _sceneView))
             //print("end cumAng V R N: \(cumAng) \(aveSpeed) \(aveV) \(aveR) \(numSample) \(gestureRecognize.velocity(in: _sceneView))")
-            _game.flicked(aveV, pos: aveR, speed: aveSpeed, angle: cumAng, toggle)
+            _game.flicked(aveV, pos: safePos(aveR), speed: aveSpeed, angle: cumAng, toggle)
             toggle = false
         } else if (gestureRecognize.state == .ended || gestureRecognize.state == .cancelled) && movingDie != nil  {
             if !(gestureRecognize.state == .cancelled) { helpMoveDie(die: movingDie!, pos: gestureRecognize.location(in: _sceneView)) }
@@ -264,7 +317,7 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
             if let object = hits.first?.node {      // get object we're touching
                 movingDie = object as? Dice         // are we on a die?
                 toggle = gestureRecognize.numberOfTouches > 1
-                if movingDie == nil { movingDie = _world.nearestDie(pos: startFlick, tolerance: 22) } // are we close to a die?
+                if movingDie == nil { movingDie = _world.nearestDie(pos: safePos(startFlick), tolerance: 22) } // are we close to a die?
                 if movingDie == nil || toggle { // || _world.state == .rolling {  // we're swiping, keep track of it...
                     let v = gestureRecognize.velocity(in: _sceneView)
                     let ang = atan2(v.y, v.x)
@@ -292,7 +345,7 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
             let pos = gestureRecognize.location(in: _sceneView) //CGPoint
             let hits = _sceneView.hitTest(pos, options: nil)
             if let object = hits.first?.node {
-                _game.tripleTapped(object, pos, gestureRecognize.numberOfTouches > 1)
+                _game.tripleTapped(object, safePos(pos), gestureRecognize.numberOfTouches > 1)
             }
         }
     }
@@ -302,9 +355,9 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
             let pos = gestureRecognize.location(in: _sceneView) //CGPoint
             let hits = _sceneView.hitTest(pos, options: nil)
             if let objectTap = hits.first?.node {
-                _game.tapped(objectTap, pos, gestureRecognize.numberOfTouches > 1)
+                _game.tapped(objectTap, safePos(pos), gestureRecognize.numberOfTouches > 1)
             } else {
-                _game.tapped(pos, gestureRecognize.numberOfTouches > 1)
+                _game.tapped(safePos(pos), gestureRecognize.numberOfTouches > 1)
             }
         }
     }
@@ -312,7 +365,6 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
     func createButtons() { // create help, sound, setting and un/re/do buttons
 
         //sound button
-        soundButton.frame = CGRect(x: overlayBounds.width - 39, y: 0, width: 34, height: 34)
         soundButton.backgroundColor = UIColor.clear
         soundButton.setImage(UIImage(named: "mute"), for: .normal)
         soundButton.contentVerticalAlignment = .fill; soundButton.contentHorizontalAlignment = .fill
@@ -321,7 +373,6 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
         _sceneView.addSubview(soundButton)
         
         //settings button
-        settingButton.frame = CGRect(x: 0, y: overlayBounds.height - 34, width: 34, height: 34)
         settingButton.backgroundColor = UIColor.clear
         settingButton.setImage(UIImage(named: "gear"), for: .normal)
         settingButton.contentVerticalAlignment = .fill; settingButton.contentHorizontalAlignment = .fill
@@ -330,7 +381,6 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
         _sceneView.addSubview(settingButton)
         
         //history button
-        historyButton.frame = CGRect(x: 0, y: overlayBounds.height - 70, width: 34, height: 34)
         historyButton.backgroundColor = UIColor.clear
         historyButton.setImage(UIImage(named: "receipt"), for: .normal)
         historyButton.contentVerticalAlignment = .fill; historyButton.contentHorizontalAlignment = .fill
@@ -341,7 +391,6 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
         _sceneView.addSubview(historyButton)
         
         //help button
-        helpButton.frame = CGRect(x: overlayBounds.width - 34, y: overlayBounds.height - 34, width: 34, height: 34)
         helpButton.backgroundColor = UIColor.clear
         helpButton.setImage(UIImage(named: "help"), for: .normal)
         helpButton.contentVerticalAlignment = .fill; helpButton.contentHorizontalAlignment = .fill
@@ -350,7 +399,6 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
         _sceneView.addSubview(helpButton)
         
         //undo button
-        undoButton.frame = CGRect(x: 0, y: 2, width: 34, height: 34)
         undoButton.backgroundColor = UIColor.clear
         undoButton.setImage(UIImage(named: "undo"), for: .normal)
         undoButton.contentVerticalAlignment = .fill; undoButton.contentHorizontalAlignment = .fill
@@ -362,9 +410,6 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
         undoButton.isHidden = true
 
         //redo button
-        //redoButton.frame = CGRect(x: 0, y: 54, width: 34, height: 34)
-        //redoButton.frame = CGRect(x: 54, y: 2, width: 34, height: 34)
-        redoButton.frame = CGRect(x: 0, y: 36, width: 34, height: 34)
         redoButton.backgroundColor = UIColor.clear
         redoButton.setImage(UIImage(named: "redo"), for: .normal)
         redoButton.contentVerticalAlignment = .fill; redoButton.contentHorizontalAlignment = .fill
@@ -377,32 +422,28 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
         redoButton.isHidden = true
         
         toggleDieButton()
+        layoutButtons()
     }
     
     
     func toggleDieButton() {
         if dieButton.isEmpty {
-            let y0 = CGFloat(54)
-            let dyy = (overlayBounds.height - 44 - y0) / CGFloat(DieType.allCases.count + 1)
-            let dy = (dyy < 65) ? dyy : 65
-            let sz = dy * 50/65
-            let x0 = overlayBounds.width - sz
-            dieButtonPos = CGRect(x: x0, y: y0, width: sz, height: dy*CGFloat(DieType.allCases.count))
-            for (i,type) in DieType.allCases.enumerated() {
-                dieButton[type] = UIButton(frame: CGRect(x: x0, y: y0+dy*CGFloat(i), width: sz, height: sz))
-                dieButton[type]?.backgroundColor = UIColor.clear
-                dieButton[type]!.setImage(smallIcon[type], for: .normal)
-                dieButton[type]!.addTarget(self, action: #selector(doDie), for: .touchUpInside)
-                _sceneView.addSubview(dieButton[type]!)
-                dieButton[type]!.isEnabled = true
+            for type in DieType.allCases {
+                let button = UIButton()
+                button.backgroundColor = UIColor.clear
+                button.setImage(smallIcon[type], for: .normal)
+                button.addTarget(self, action: #selector(doDie), for: .touchUpInside)
+                _sceneView.addSubview(button)
+                button.isEnabled = true
+                dieButton[type] = button
             }
             //all button
-            allButton.frame = CGRect(x: x0, y: y0+dy*CGFloat(DieType.allCases.count), width: sz, height: sz)
             allButton.backgroundColor = UIColor.clear
             allButton.setImage(UIImage(named: "allSMALL"), for: .normal)
             allButton.addTarget(self, action: #selector(doAllDie), for: .touchUpInside)
             _sceneView.addSubview(allButton)
             allButton.isEnabled = true
+            layoutButtons()
         } else {
             let p = allButton.isEnabled
             allButton.isEnabled = !p
@@ -415,7 +456,7 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
     }
     
     @objc func doAllDie(sender: UIButton!) {
-        diceSetView = DiceSetView(frame: self.view.frame, safe: overlayBounds, image: smallIcon, inventory: _world.inventory(), max: 25)
+        diceSetView = DiceSetView(frame: self.view.bounds, safe: overlayBounds, image: smallIcon, inventory: _world.inventory(), max: 25)
         if diceSetView != nil {
             removeGestures()
             self.view.addSubview(diceSetView!)
@@ -425,7 +466,7 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
     @objc func doDie(sender: UIButton!) { // user wants to select a number of dice
         if diceNumberView != nil {return}  // long tap, don't do button!
         dieType = (dieButton.first(where: { $1 == sender })?.key)!
-        diceNumberView = DiceNumberView(frame: self.view.frame, safe: overlayBounds, image: sender.currentImage!, add: false)
+        diceNumberView = DiceNumberView(frame: self.view.bounds, safe: overlayBounds, image: sender.currentImage!, add: false)
         if diceNumberView != nil {
             removeGestures()
             self.view.addSubview(diceNumberView!)
@@ -451,14 +492,14 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
     }
     @objc func showHistory(sender: UIButton!){ // settings was pressed
         if _game.history == nil {return}
-        historyView = HistoryView(frame: self.view.frame, safe: overlayBounds, history: _game.history!, gvc: self)
+        historyView = HistoryView(frame: self.view.bounds, safe: overlayBounds, history: _game.history!, gvc: self)
         if historyView != nil {
             removeGestures()
             self.view.addSubview(historyView!)
         }
     }
     @objc func showSettings(sender: UIButton!){ // settings was pressed
-        settingView = SettingView(frame: self.view.frame, safe: overlayBounds, game: _game!)
+        settingView = SettingView(frame: self.view.bounds, safe: overlayBounds, game: _game!)
         if settingView != nil {
             removeGestures()
             self.view.addSubview(settingView!)
@@ -467,7 +508,7 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
     
     @objc func showHelpDetail(sender: UIButton!){ // help was pressed
         if helpView != nil {helpView!.removeFromSuperview()}; helpView = nil
-        helpDetailView = HelpDetailView(frame: self.view.frame, safe: overlayBounds)
+        helpDetailView = HelpDetailView(frame: self.view.bounds, safe: overlayBounds)
         if helpDetailView != nil {
             removeGestures()
             self.view.addSubview(helpDetailView!)
@@ -475,7 +516,7 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
     }
     
     @objc func showHelp(sender: UIButton!){ // help was pressed
-        helpView = HelpView(frame: self.view.frame, safe: overlayBounds, game: _game!)
+        helpView = HelpView(frame: self.view.bounds, safe: overlayBounds, game: _game!)
         if helpView != nil {
             removeGestures()
             self.view.addSubview(helpView!)
