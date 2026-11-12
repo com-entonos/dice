@@ -72,6 +72,7 @@ class World: SCNScene, SCNPhysicsContactDelegate {
     
     var wScale = CGFloat(0)  // table width (m)
     var hScale = CGFloat(0)  // table height (m)
+    var dScale = CGFloat(0)  // table box height (m)
     
     private var height = CGFloat(0)  // screen size in pixels
     private var width = CGFloat(0)
@@ -712,7 +713,7 @@ class World: SCNScene, SCNPhysicsContactDelegate {
         let cameraY = (convert(d: CGFloat(30)) + Float(min(wScale,hScale))) / 2 / Float(tan(otherFOV))  // add 30 points for a border
         launchHeight = cameraY * 10 / 18  // launch dice below the camera
         launchHeight = min(8 * dieSize, launchHeight)
-        let dScale = CGFloat(launchHeight*scaleLH*5 + 125 * dieSize)
+        dScale = CGFloat(launchHeight*scaleLH*5 + 125 * dieSize)
 //      let dScale = CGFloat(launchHeight*scaleLH + 125 * dieSize) // height of the box, so dice can never escape (right apple?)
         for node in self.rootNode.childNodes {
             if node.name! == "camera" {
@@ -760,7 +761,7 @@ class World: SCNScene, SCNPhysicsContactDelegate {
         let cameraY = (convert(d: CGFloat(30)) + Float(min(wScale,hScale))) / 2 / Float(tan(otherFOV)) // add 30 points at edge for border
         launchHeight = cameraY * 10 / 18  // launch dice below the camera
         launchHeight = min(8 * dieSize, launchHeight)
-        let dScale = CGFloat(launchHeight*scaleLH*5 + 125 * dieSize) // height of the box, so dice can never escape (right apple?)
+        dScale = CGFloat(launchHeight*scaleLH*5 + 125 * dieSize) // height of the box, so dice can never escape (right apple?)
 //      let dScale = CGFloat(launchHeight*scaleLH + 125 * dieSize)
 //print("ar:\(ar), width:\(width), height:\(height)")
 //print("wS:\(wScale), hS:\(hScale), camera:\(cameraY), launchHeight:\(launchHeight), scaleLH:\(scaleLH), dScale:\(dScale)")
@@ -954,6 +955,35 @@ class World: SCNScene, SCNPhysicsContactDelegate {
         fatalError("Not yet implemented")
     }
     
+    func resize(to newRect: CGRect) {
+        guard newRect.width > 0 && newRect.height > 0 else { return }
+        let oldWScale = wScale
+        let oldHScale = hScale
+
+        self.rect = newRect
+        self.width = newRect.width
+        self.height = newRect.height
+
+        let ar = width / height
+        if let cameraNode = self.rootNode.childNode(withName: "camera", recursively: false),
+           let camera = cameraNode.camera {
+            camera.projectionDirection = (ar < 1) ? .vertical : .horizontal
+            otherFOV = asin(sin(camera.fieldOfView * CGFloat.pi / 360) * min(ar, 1 / ar))
+        }
+
+        adjustGameBoard()
+
+        if oldWScale > 0 && oldHScale > 0 && !_dice.isEmpty {
+            let scaleX = Float(wScale / oldWScale)
+            let scaleZ = Float(hScale / oldHScale)
+            for die in _dice {
+                let r = die.presentation.simdPosition
+                die.simdPosition = simd_float3(r.x * scaleX, r.y, r.z * scaleZ)
+                die.physicsBody?.resetTransform()
+            }
+        }
+    }
+
 }
 
 class GameAudioPlayer : SCNAudioPlayer {
