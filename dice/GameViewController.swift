@@ -564,11 +564,23 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
         return true
     }
     
+    //override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+    //    return .landscape
+    //}
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
-        return .landscape
-    }
-    
-    func supportedInterfaceOrientations(for window: UIWindow?) -> UIInterfaceOrientationMask {
+        let bounds: CGRect
+        if #available(iOS 13.0, *), let windowScene = view.window?.windowScene {
+            bounds = windowScene.screen.bounds
+        } else if let window = view.window {
+            bounds = window.screen.bounds
+        } else {
+            return .landscape
+        }
+        
+        let aspectRatio = max(bounds.width, bounds.height) / min(bounds.width, bounds.height)
+        if traitCollection.userInterfaceIdiom == .phone && aspectRatio < 1.6 {
+            return .all
+        }
         return .landscape
     }
     
