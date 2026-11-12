@@ -225,6 +225,11 @@ class Game {
                 hud!.toClear()
                 hud!.message("Collect " + String(point), color: UIColor.blue)
                 hud!.info("(next player)", color: UIColor.darkGray)
+                if !gameDone {
+                    _history?.add(result: NSAttributedString(string: "Collect " + String(point), attributes: [NSAttributedString.Key.foregroundColor : UIColor.blue]), game: gameName(game: game),true)
+                    //world.deleteUndo()
+                    world.newUndo()
+                }
                 gameDone = true
             } else if game != .ship && game != .midnight || (game == .ship && selectableDie.contains(die)) || (game == .midnight && selectableDie.contains(die)) {
                 world.holdDie(die)
@@ -389,7 +394,9 @@ class Game {
         for type in DieType.allCases {
             cRoll = getResultString(pre: cRoll, type: type)
         }
-        if (!doingUnRedo) {_history?.add(result: cRoll as NSAttributedString, game: gameName(game: game))}
+        
+        var gameResult = NSAttributedString(string: "")
+        //if (!doingUnRedo) {_history?.add(result: cRoll as NSAttributedString, game: gameName(game: game))}
         
         // sorry for the mess...
         if game == .freeplay {
@@ -421,6 +428,7 @@ class Game {
             }
             if selectableDie.count < 1 {
                 hud!.message("Score: " + String(sum), color: UIColor.blue)
+                gameResult = NSAttributedString(string: "Score: " + String(sum), attributes: [NSAttributedString.Key.foregroundColor : UIColor.blue])
                 hud!.info("(next player)", color: UIColor.darkGray)
                 world.unholdDie(die: nil)
                 hud!.tl("Need some aces (do first throw)", color: UIColor.darkGray)
@@ -464,8 +472,10 @@ class Game {
             }
             if selectableDie.count < 2 { // game done
                 if vals[0] > 0 && vals[3] > 0 { // score!
+                    gameResult = NSAttributedString(string: "Score: " + String(sum-5), attributes: [NSAttributedString.Key.foregroundColor : UIColor.blue])
                     hud!.message("Score: " + String(sum-5), color: UIColor.blue)
                 } else {
+                    gameResult = NSAttributedString(string: "No Score!", attributes: [NSAttributedString.Key.foregroundColor : UIColor.red])
                     hud!.message("No Score!", color: UIColor.red)
                 }
                 hud!.info("(next player)", color: UIColor.darkGray)
@@ -510,6 +520,7 @@ class Game {
             numRolls += 1
             if sum == 1 {
                 hud!.toClear()
+                gameResult = NSAttributedString(string: "Collect 0", attributes: [NSAttributedString.Key.foregroundColor : UIColor.red])
                 hud!.message("Collect " + String(0), color: UIColor.red)
                 hud!.info("(next player)", color: UIColor.darkGray)
                 gameDone = true
@@ -530,11 +541,13 @@ class Game {
             hud!.tl("Bless: " + String(vals[5] + vals[4] + vals[3]), color: UIColor.blue)
             
             if vals[5] + vals[4] > 0 {
+                gameResult = NSAttributedString(string: "PASS!", attributes: [NSAttributedString.Key.foregroundColor : UIColor.blue])
                 hud!.message("PASS!", color: UIColor.blue)
                 if vals[5] < 1 {
                     hud!.info("(unless Bane)", color: UIColor.red)
                 }
             } else {
+                gameResult = NSAttributedString(string: "FAIL!", attributes: [NSAttributedString.Key.foregroundColor : UIColor.red])
                 hud!.message("FAIL!", color: UIColor.red)
                 if vals[3] > 0 {
                     hud!.info("(unless Blessed)", color: UIColor.blue)
@@ -552,8 +565,10 @@ class Game {
             numRolls += 1
             if numRolls == 1 && (sum == 7 || sum == 11 || sum == 2 || sum == 3 || sum == 12) {
                 if sum == 7 || sum == 11 {
+                    gameResult = NSAttributedString(string: "NATURAL!", attributes: [NSAttributedString.Key.foregroundColor : UIColor.blue])
                     hud!.message("NATURAL!", color: UIColor.blue)
                 } else {
+                    gameResult = NSAttributedString(string: "CRAPS!", attributes: [NSAttributedString.Key.foregroundColor : UIColor.red])
                     hud!.message("CRAPS!", color: UIColor.red)
                 }
                 hud!.tl("Do come-out throw", color: UIColor.darkGray)
@@ -566,11 +581,13 @@ class Game {
                 hud!.tl("Do come-out throw", color: UIColor.darkGray)
             } else {
                 if sum == 7 {
+                    gameResult = NSAttributedString(string: "SEVEN-OUT!", attributes: [NSAttributedString.Key.foregroundColor : UIColor.red])
                     hud!.message("SEVEN-OUT!", color: UIColor.red)
                     hud!.info("(new shooter!)", color: UIColor.darkGray)
                     hud!.tl("Do come-out throw", color: UIColor.darkGray)
                     gameDone = true
                 } else if sum == point {
+                    gameResult = NSAttributedString(string: "WINNER!", attributes: [NSAttributedString.Key.foregroundColor : UIColor.blue])
                     hud!.message("WINNER!", color: UIColor.blue)
                     hud!.tl("Do come-out throw", color: UIColor.darkGray)
                     gameDone = true
@@ -608,8 +625,10 @@ class Game {
             if numRolls > 2 || all {
                 hud!.toClear() // clear HUD
                 if gotSCC { // score!
+                    gameResult = NSAttributedString(string: "Score: " + String(sum-15), attributes: [NSAttributedString.Key.foregroundColor : UIColor.blue])
                     hud!.message("Score: " + String(sum-15), color: UIColor.blue)
                 } else {
+                    gameResult = NSAttributedString(string: "No Score!", attributes: [NSAttributedString.Key.foregroundColor : UIColor.red])
                     hud!.message("No Score!", color: UIColor.red)
                 }
                 hud!.info("(next player)", color: UIColor.darkGray)
@@ -647,6 +666,14 @@ class Game {
                     }
                 }
             }
+        }
+        if (!doingUnRedo) {
+            if !gameResult.string.isEmpty {
+                let colon = NSAttributedString(string: ": ", attributes: [NSAttributedString.Key.foregroundColor : UIColor.white])
+                cRoll.append(colon)
+                cRoll.append(gameResult)
+            }
+            _history?.add(result: cRoll as NSAttributedString, game: gameName(game: game))
         }
     }
     

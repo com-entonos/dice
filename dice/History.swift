@@ -22,13 +22,20 @@ class History {
         historyButton!.isEnabled = (history.count > 0)
     }
     
-    func add(result: NSAttributedString, game: String) {
-        history.insert(result, at: 0)
-        let dateF = DateFormatter()
-        dateF.dateStyle = .medium
-        dateF.timeStyle = .medium
-        time.insert(dateF.string(from: Date()) + " (" + game + ")", at: 0)
-        historyButton!.isEnabled = (history.count > 0)
+    func add(result: NSAttributedString, game: String, _ append: Bool = false) {
+        if !append {
+            history.insert(result, at: 0)
+            let dateF = DateFormatter()
+            dateF.dateStyle = .medium
+            dateF.timeStyle = .medium
+            time.insert(dateF.string(from: Date()) + " (" + game + ")", at: 0)
+            historyButton!.isEnabled = (history.count > 0)
+        } else {
+            let newHistory = history[0].mutableCopy() as! NSMutableAttributedString
+            newHistory.append(result)
+            history.removeFirst()
+            history.insert(newHistory, at: 0)
+        }
     }
     
     func getHistory() -> [NSAttributedString] {
