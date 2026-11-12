@@ -79,10 +79,11 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
         createGestures()    // create gestures
         
         _sceneView.overlaySKScene = _game.hud!.scene    // overlay the HUD
+        _game.hud?.resize(viewBounds: self.view.bounds, safeArea: overlayBounds)
         //NotificationCenter.default.addObserver(self, selector: #selector(self.physicsDone), name: NSNotification.Name("physicsDone"), object: nil) // be told when physic simulation is done
         
         //_game.setDiceNumber(diceSet: [dieType:2]) // let's place two dice to get started...
-        startView = StartView(frame: self.view.frame, safe: overlayBounds, game: _game!)
+        startView = StartView(frame: self.view.bounds, safe: overlayBounds, game: _game!)
         if startView != nil {
             removeGestures()
             self.view.addSubview(startView!)
