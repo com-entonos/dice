@@ -110,26 +110,41 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
         }
     }
 
-    
     func layoutButtons() {
+        let safe = self.view.safeAreaInsets
         let ox = overlayBounds.origin.x
         let oy = overlayBounds.origin.y
         let ow = overlayBounds.width
         let oh = overlayBounds.height
         
-        soundButton.frame = CGRect(x: ox + ow - 39, y: oy, width: 34, height: 34)
-        settingButton.frame = CGRect(x: ox, y: oy + oh - 34, width: 34, height: 34)
-        historyButton.frame = CGRect(x: ox, y: oy + oh - 70, width: 34, height: 34)
-        helpButton.frame = CGRect(x: ox + ow - 34, y: oy + oh - 34, width: 34, height: 34)
-        undoButton.frame = CGRect(x: ox, y: oy + 2, width: 34, height: 34)
-        redoButton.frame = CGRect(x: ox, y: oy + 36, width: 34, height: 34)
+        let cornerPadX: CGFloat = (traitCollection.userInterfaceIdiom == .phone) ? 14 : 6
+        let cornerPadY: CGFloat = (traitCollection.userInterfaceIdiom == .phone) ? 10 : 6
+        
+        let leftPad = (safe.left < 16) ? cornerPadX : 2
+        let rightPad = (safe.right < 16) ? cornerPadX : 2
+        let topPad = (safe.top < 16) ? cornerPadY : 2
+        let bottomPad = (safe.bottom < 16) ? cornerPadY : 2
+        
+        let minX = ox + leftPad
+        let maxX = ox + ow - rightPad
+        let minY = oy + topPad
+        let maxY = oy + oh - bottomPad
+        
+        soundButton.frame = CGRect(x: maxX - 34, y: minY, width: 34, height: 34)
+        undoButton.frame = CGRect(x: minX, y: minY, width: 34, height: 34)
+        redoButton.frame = CGRect(x: minX, y: minY + 36, width: 34, height: 34)
+        settingButton.frame = CGRect(x: minX, y: maxY - 34, width: 34, height: 34)
+        historyButton.frame = CGRect(x: minX, y: maxY - 70, width: 34, height: 34)
+        helpButton.frame = CGRect(x: maxX - 34, y: maxY - 34, width: 34, height: 34)
         
         guard !dieButton.isEmpty else { return }
-        let y0 = oy + 54
-        let dyy = (oh - 44 - 54) / CGFloat(DieType.allCases.count + 1)
-        let dy = (dyy < 65) ? dyy : 65
-        let sz = dy * 50/65
-        let x0 = ox + ow - sz
+        let y0 = minY + 50
+        let availableH = (maxY - 44) - y0
+        let dyy = availableH / CGFloat(DieType.allCases.count + 1)
+        let dy = min(65, dyy)
+        let sz = dy * 50 / 65
+        let x0 = maxX - sz
+        
         dieButtonPos = CGRect(x: x0, y: y0, width: sz, height: dy * CGFloat(DieType.allCases.count))
         for (i, type) in DieType.allCases.enumerated() {
             dieButton[type]?.frame = CGRect(x: x0, y: y0 + dy * CGFloat(i), width: sz, height: sz)
@@ -424,6 +439,7 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
         
         toggleDieButton()
         layoutButtons()
+        _sceneView.bringSubviewToFront(_game.hud!.result)
     }
     
     
@@ -606,22 +622,22 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
         return true
     }
     
-    //override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
-    //    return .landscape
-    //}
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
-        let bounds: CGRect
-        if #available(iOS 13.0, *), let windowScene = view.window?.windowScene {
-            bounds = windowScene.screen.bounds
-        } else if let window = view.window {
-            bounds = window.screen.bounds
-        } else {
+        guard let windowScene = view.window?.windowScene else {
             return .landscape
         }
         
+        let bounds = windowScene.screen.bounds
         let aspectRatio = max(bounds.width, bounds.height) / min(bounds.width, bounds.height)
-        if traitCollection.userInterfaceIdiom == .phone && aspectRatio < 1.6 {
-            return .all
+        
+        if traitCollection.userInterfaceIdiom == .phone {
+            if aspectRatio < 1.6 {
+                // Unfolded inner screen on iPhone Duo: allow all 4 orientations
+                return .all
+            } else if aspectRatio < 2.05 {
+                // Closed outer screen on iPhone Duo: allow portrait & landscape, block upside-down portrait
+                return .allButUpsideDown
+            }
         }
         return .landscape
     }

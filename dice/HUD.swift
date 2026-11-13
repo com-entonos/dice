@@ -186,6 +186,9 @@ class HUD {
         resultLabel.font = UIFont(name: "Arial", size: 20)
         resultLabel.numberOfLines = 0
         resultLabel.lineBreakMode = .byWordWrapping
+        resultLabel.backgroundColor = UIColor.black.withAlphaComponent(0.6)
+        resultLabel.layer.cornerRadius = 6
+        resultLabel.clipsToBounds = true
         
         layout(viewBounds: size, safeArea: size)
         hudState = .empty
@@ -214,12 +217,16 @@ class HUD {
         self.viewSize = viewBounds.size
         self.safeRect = safeArea
 
-        // Convert UIKit safeArea (top-left origin) to SpriteKit coordinates (bottom-left origin)
-        let skLeft = safeArea.minX
-        let skRight = safeArea.maxX
+        // Add corner bezel clearance on edges without a large notch/home-indicator safe area inset
+        let padX: CGFloat = (safeArea.minX < 16) ? 14 : 2
+        let padTop: CGFloat = (safeArea.minY < 16) ? 10 : 2
+        let padBot: CGFloat = ((viewBounds.height - safeArea.maxY) < 16) ? 10 : 2
+
+        let skLeft = safeArea.minX + padX
+        let skRight = safeArea.maxX - ((viewBounds.width - safeArea.maxX) < 16 ? 14 : 2)
         let skMidX = safeArea.midX
-        let skTop = viewBounds.height - safeArea.minY
-        let skBottom = viewBounds.height - safeArea.maxY
+        let skTop = viewBounds.height - (safeArea.minY + padTop)
+        let skBottom = viewBounds.height - (safeArea.maxY - padBot)
         let skMidY = (skTop + skBottom) / 2
 
         message.position = CGPoint(x: skMidX, y: skMidY)
@@ -234,7 +241,7 @@ class HUD {
         bottomright.position = CGPoint(x: skRight - 32, y: skBottom)
 
         // UIKit resultLabel uses standard top-left coordinates
-        resultLabel.frame = CGRect(x: safeArea.minX + 32, y: safeArea.maxY - 20, width: max(64, safeArea.width - 64), height: 20)
+        resultLabel.frame = CGRect(x: skLeft + 32, y: safeArea.maxY - padBot - 20, width: max(64, (skRight - skLeft) - 64), height: 20)
         if !resultLabel.isHidden, let attr = resultLabel.attributedText {
             result(NSMutableAttributedString(attributedString: attr))
         }
