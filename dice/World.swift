@@ -270,22 +270,18 @@ class World: SCNScene, SCNPhysicsContactDelegate {
                         var r = die.presentation.simdPosition
                         var v = die.physicsBody!.velocity
                         let pad = die.circumR
-                        let maxX = Float(wScale / 2) - pad
-                        let maxZ = Float(hScale / 2) - pad
-                        let maxY = Float(dScale) - pad
+                        let maxX = Float(wScale / 2)
+                        let maxZ = Float(hScale / 2)
                         var escaped = false
 
-                        if r.x < -maxX { r.x = -maxX; v.x = abs(v.x) * Float(0.9); escaped = true }
-                        else if r.x > maxX { r.x = maxX; v.x = -abs(v.x) * Float(0.9); escaped = true }
+                        if abs(r.x) > maxX { let s = Float(r.x.sign == .minus ? 1.0 : -1.0); r.x = (pad - maxX) * s; v.x = s * abs(v.x) * 0.9; escaped = true}
 
-                        if r.z < -maxZ { r.z = -maxZ; v.z = abs(v.z) * Float(0.9); escaped = true }
-                        else if r.z > maxZ { r.z = maxZ; v.z = -abs(v.z) * Float(0.9); escaped = true }
+                        if abs(r.z) > maxZ { let s = Float(r.z.sign == .minus ? 1.0 : -1.0); r.z = (pad - maxZ) * s; v.z = s * abs(v.z) * 0.9; escaped = true}
 
                         if r.y < 0 { r.y = die.inR; v.y = abs(v.y) * 0.1; escaped = true }
-                        else if r.y > maxY { r.y = maxY; v.y = -abs(v.y) * 0.1; escaped = true }
 
                         if escaped {
-                            die.physicsBody!.clearAllForces()
+                     //     die.physicsBody!.clearAllForces()
                             die.simdPosition = r
                      //     die.presentation.simdPosition = r
                             die.physicsBody!.velocity = v
