@@ -65,15 +65,17 @@ class SettingView : UIView, UIPickerViewDataSource, UIPickerViewDelegate, UIScro
         let label2 = UILabel(frame: CGRect(x: dw, y: 330, width: labelW, height: 35)); label2.text = "Dice size:"; label2.font = .systemFont(ofSize: 18); label2.textAlignment = .right
         let label7 = UILabel(frame: CGRect(x: dw, y: 380, width: labelW, height: 35)); label7.text = "Throw:"; label7.font = .systemFont(ofSize: 18); label7.textAlignment = .right
         let label6 = UILabel(frame: CGRect(x: dw, y: 430, width: labelW, height: 35)); label6.text = "Pulse dice:"; label6.font = .systemFont(ofSize: 18); label6.textAlignment = .right
-        let label5 = UILabel(frame: CGRect(x: dw, y: 480, width: labelW + 40, height: 35)); label5.text = "Number of undo:"; label5.font = .systemFont(ofSize: 16); label5.adjustsFontSizeToFitWidth = true
+        let label5 = UILabel(frame: CGRect(x: dw, y: 480, width: labelW, height: 35)); label5.text = "Undo:"; label5.font = .systemFont(ofSize: 18); label5.textAlignment = .right
         let label8 = UILabel(frame: CGRect(x: dw, y: 530, width: labelW, height: 35)); label8.text = "History:"; label8.font = .systemFont(ofSize: 18); label8.textAlignment = .right
         let label9 = UILabel(frame: CGRect(x: dw, y: 580, width: labelW, height: 35)); label9.text = "Launch:"; label9.font = .systemFont(ofSize: 18); label9.textAlignment = .right
         
         let doneButton = UIButton(type: .system)
         let donateButton = UIButton(type: .system)
-        let btnMargin: CGFloat = max(16, 40 - safe.origin.x)
-        doneButton.frame = CGRect(x: safe.origin.x + safe.width - btnMargin - 120, y: safe.origin.y + safe.height - 50, width: 120, height: 40)
-        donateButton.frame = CGRect(x: safe.origin.x + btnMargin, y: safe.origin.y + safe.height - 50, width: 200, height: 40)
+        let leftEdge = max(safe.origin.x + 16, safe.origin.x + dw)
+        let rightEdge = min(safe.origin.x + safe.width - 16, safe.origin.x + ctrlX + tapWidth)
+        doneButton.frame = CGRect(x: rightEdge - 100, y: safe.origin.y + safe.height - 50, width: 100, height: 40)
+        donateButton.frame = CGRect(x: leftEdge, y: safe.origin.y + safe.height - 50, width: 180, height: 40)
+
 
         scrollView.contentSize = CGSize(width: safe.width, height: 625)
         settingView.frame = CGRect(x: 0, y: 0, width: safe.width, height: 625)
@@ -95,6 +97,7 @@ class SettingView : UIView, UIPickerViewDataSource, UIPickerViewDelegate, UIScro
             //diceSegment.setTitle(dieOpt[i], forSegmentAt: i)
             diceSegment.insertSegment(withTitle: dieOpt[i], at: i, animated: true)
         }
+        if diceW < 340 { diceSegment.setTitleTextAttributes([.font: UIFont.systemFont(ofSize: 12)], for: .normal)   }
         if dieSize == 5.2 {
             diceSegment.selectedSegmentIndex = 4
         } else if dieSize == 7.5 {
@@ -161,6 +164,7 @@ class SettingView : UIView, UIPickerViewDataSource, UIPickerViewDelegate, UIScro
         doneButton.backgroundColor = UIColor.clear
         doneButton.setTitle("Let's Play!", for: .normal)
         doneButton.titleLabel?.font = UIFont(name: "Arial", size: 18)
+        doneButton.contentHorizontalAlignment = .right
         doneButton.titleLabel?.textAlignment = .right
         doneButton.addTarget(nil, action: #selector(GameViewController.donePressed), for: .touchUpInside)
         //doneButton.addTarget(self.superview, action: #selector(GameViewController.donePressed), for: .touchUpInside)
@@ -171,6 +175,7 @@ class SettingView : UIView, UIPickerViewDataSource, UIPickerViewDelegate, UIScro
         donateButton.setTitle("Say \"hi\" to Entonos!", for: .normal)
         donateButton.titleLabel?.textAlignment = .left
         donateButton.titleLabel?.font = UIFont(name: "Arial", size: 18)
+        donateButton.contentHorizontalAlignment = .left
         donateButton.addTarget(self, action: #selector(self.donate), for: .touchUpInside)
         
         settingView.addSubview(gamePicker)
@@ -281,16 +286,23 @@ class SettingView : UIView, UIPickerViewDataSource, UIPickerViewDelegate, UIScro
         }
     }
     
-    func pickerView(_ pickerView: UIPickerView, attributedTitleForRow row: Int, forComponent component: Int) -> NSAttributedString? {
-        switch pickerView {
-        case gamePicker:
-            return NSAttributedString(string: games[row],    attributes: [.foregroundColor: UIColor.black, .font: UIFont(name: "Arial", size: 18)!])
-        case tapPicker:
-            return NSAttributedString(string: tapOpt[row],   attributes: [.foregroundColor: UIColor.black, .font: UIFont(name: "Arial", size: 18)!])
-        default:
-            return NSAttributedString(string: "INTERNAL ERROR", attributes: [.foregroundColor: UIColor.black, .font: UIFont(name: "Arial", size: 18)!])
+    func pickerView(_ pickerView: UIPickerView, viewForRow row: Int, forComponent component: Int, reusing view: UIView?) -> UIView {
+            let label = (view as? UILabel) ?? UILabel()
+            label.textColor = .black
+            label.textAlignment = .center
+            if pickerView == gamePicker {
+                label.font = UIFont(name: "Arial", size: 18)
+                label.text = games[row]
+            } else {
+                let colW = pickerView.bounds.width / 5.0
+                let fontSize: CGFloat = (colW < 75) ? 13 : 18
+                label.font = UIFont(name: "Arial", size: fontSize)
+                label.adjustsFontSizeToFitWidth = true
+                label.minimumScaleFactor = 0.65
+                label.text = tapOpt[row]
+            }
+            return label
         }
-    }
     
     func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
         if pickerView == gamePicker {
