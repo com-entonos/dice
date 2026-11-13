@@ -15,6 +15,7 @@
 		2C26BC94232DDA7C00A41E81 /* Game.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C26BC93232DDA7C00A41E81 /* Game.swift */; };
 		2C5C80D92482ED79005D94C6 /* HelpDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C5C80D82482ED79005D94C6 /* HelpDetailView.swift */; };
 		2C63B715234CE2C800B5528C /* DiceNumber.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C63B714234CE2C800B5528C /* DiceNumber.swift */; };
+		2C77335B30A6571D008C0EEC /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C77335A30A6571D008C0EEC /* SceneDelegate.swift */; };
 		2C897C2923399C1F00B4ECA6 /* SettingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C897C2823399C1F00B4ECA6 /* SettingView.swift */; };
 		2C8C739D24873E0400452FF9 /* History.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C8C739C24873E0400452FF9 /* History.swift */; };
 		2C8C739F2488A98600452FF9 /* Start.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C8C739E2488A98600452FF9 /* Start.swift */; };
@@ -36,6 +37,7 @@
 		2C26BC93232DDA7C00A41E81 /* Game.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Game.swift; sourceTree = "<group>"; };
 		2C5C80D82482ED79005D94C6 /* HelpDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpDetailView.swift; sourceTree = "<group>"; };
 		2C63B714234CE2C800B5528C /* DiceNumber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiceNumber.swift; sourceTree = "<group>"; };
+		2C77335A30A6571D008C0EEC /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		2C897C2823399C1F00B4ECA6 /* SettingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingView.swift; sourceTree = "<group>"; };
 		2C8C739C24873E0400452FF9 /* History.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = History.swift; sourceTree = "<group>"; };
 		2C8C739E2488A98600452FF9 /* Start.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Start.swift; sourceTree = "<group>"; };
@@ -81,6 +83,7 @@
 			isa = PBXGroup;
 			children = (
 				2CE99A16231DBD7900CDBCD4 /* AppDelegate.swift */,
+				2C77335A30A6571D008C0EEC /* SceneDelegate.swift */,
 				2C26BC91232DD4C800A41E81 /* GameViewController.swift */,
 				2C26BC93232DDA7C00A41E81 /* Game.swift */,
 				2CE74E49233379E40098171A /* World.swift */,
@@ -179,6 +182,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				2CE74E4A233379E40098171A /* World.swift in Sources */,
+				2C77335B30A6571D008C0EEC /* SceneDelegate.swift in Sources */,
 				2C26BC92232DD4C800A41E81 /* GameViewController.swift in Sources */,
 				2C63B715234CE2C800B5528C /* DiceNumber.swift in Sources */,
 				2C897C2923399C1F00B4ECA6 /* SettingView.swift in Sources */,
@@ -340,7 +344,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				INFOPLIST_FILE = dice/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Dice Pro Simulator";
-				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -362,7 +366,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				INFOPLIST_FILE = dice/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Dice Pro Simulator";
-				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
