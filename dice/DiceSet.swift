@@ -36,21 +36,26 @@ class DiceSetView : UIView {
         let dropButton = UIButton(type: .system)
         let cancelButton = UIButton(type: .system)
 
-        let dx = (safe.origin.x == 0) ? 40 : safe.origin.x
+        let dx: CGFloat = Swift.max(16, 40 - safe.origin.x)
         
-        scrollView.frame = CGRect(x: safe.origin.x, y: safe.origin.y, width: safe.width, height: safe.height-50)
+        scrollView.frame = CGRect(x: safe.origin.x, y: safe.origin.y, width: safe.width, height: safe.height - 50)
         
         let dhh = scrollView.frame.height / CGFloat(DieType.allCases.count)
         let dh = (dhh < 75) ? dhh : 75
-        let sz = dh * (75-10)/75
-//print(dhh,dh,sz)
+        let sz = dh * (75 - 10) / 75
 
         settingView.frame = CGRect(x: 0, y: 0, width: safe.width, height: dh * CGFloat(DieType.allCases.count))
-        scrollView.contentSize = CGSize(width: scrollView.frame.width, height: dh * CGFloat(DieType.allCases.count)+dh)
+        scrollView.contentSize = CGSize(width: scrollView.frame.width, height: dh * CGFloat(DieType.allCases.count) + dh)
         
-        doneButton.frame = CGRect(x: safe.origin.x + safe.width - 160, y: safe.origin.y + safe.height-50, width: 150, height: 40)
-        dropButton.frame = CGRect(x: dx + (safe.width - 150) / 2, y: safe.origin.y + safe.height-50, width: 150, height: 40)
-        cancelButton.frame = CGRect(x: dx, y: safe.origin.y + safe.height-50, width: 150, height: 40)
+        let leftX = safe.origin.x + dx
+        let rightX = safe.origin.x + safe.width - dx
+        let spanW = rightX - leftX
+        let btnY = safe.origin.y + safe.height - 50
+        let btnW = min(115, (spanW - 12) / 3)
+
+        cancelButton.frame = CGRect(x: leftX, y: btnY, width: btnW, height: 40)
+        dropButton.frame   = CGRect(x: leftX + (spanW - btnW) / 2, y: btnY, width: btnW, height: 40)
+        doneButton.frame   = CGRect(x: rightX - btnW, y: btnY, width: btnW, height: 40)
         
         var y = CGFloat(0)//dy/2
         let w = safe.width
@@ -61,23 +66,31 @@ class DiceSetView : UIView {
         dButton.setTitle("", for: .normal)
         dButton.titleLabel?.textAlignment = .left
         dButton.titleLabel?.font = UIFont(name: "Arial", size: 18)
-        dButton.addTarget(self.superview, action: #selector(GameViewController.donePressed), for: .touchUpInside)
+        dButton.addTarget(nil, action: #selector(GameViewController.donePressed), for: .touchUpInside)
         self.addSubview(dButton)
         settingView.addSubview(dButton)
         
 //print(dhh,dh,sz,w,y,w-sz)
         for type in DieType.allCases {
-            slider[type] = UISlider(frame: CGRect(x: dx, y: y, width: w - dx - (50+sz+dx) , height: dh))
+            let iconX = w - dx - sz
+            let labelW: CGFloat = 44
+            let labelX = iconX - labelW - 4
+            let sliderW = labelX - dx - 8
+
+            slider[type] = UISlider(frame: CGRect(x: dx, y: y, width: sliderW, height: dh))
             slider[type]?.maximumValue = Float(max)
             slider[type]?.minimumValue = 0
-            slider[type]?.setValue(min(Float(max),Float(inventory[type]!)), animated: true)
+            slider[type]?.setValue(min(Float(max), Float(inventory[type]!)), animated: true)
             slider[type]?.addTarget(self, action: #selector(doSlide), for: .valueChanged)
-            sliderLabel[type] = UILabel(frame: CGRect(x: w - 50 - sz - dx/2 , y: y, width: 50, height: dh))
-            sliderLabel[type]?.text = String(min(max,inventory[type]!))
-            sliderLabel[type]?.font = .systemFont(ofSize: 36)
-            sliderLabel[type]?.textColor = .white
+
+            sliderLabel[type] = UILabel(frame: CGRect(x: labelX, y: y, width: labelW, height: dh))
+            sliderLabel[type]?.text = String(min(max, inventory[type]!))
+            sliderLabel[type]?.font = .systemFont(ofSize: 32)
+            sliderLabel[type]?.textAlignment = .right
+            sliderLabel[type]?.adjustsFontSizeToFitWidth = true
             sliderLabel[type]?.textColor = (Int(slider[type]!.value) == initial[type] ? .white : .red)
-            let iconImage = UIImageView(frame: CGRect(x: w - sz, y: y, width: sz, height: sz))
+
+            let iconImage = UIImageView(frame: CGRect(x: iconX, y: y, width: sz, height: sz))
             iconImage.image = image[type]
             settingView.addSubview(slider[type]!)
             settingView.addSubview(sliderLabel[type]!)
@@ -94,7 +107,8 @@ class DiceSetView : UIView {
         doneButton.setTitle("Throw dice!", for: .normal)
         doneButton.titleLabel?.font = UIFont(name: "Arial", size: 18)
         doneButton.titleLabel?.textAlignment = .right
-        doneButton.addTarget(self.superview, action: #selector(GameViewController.dieSetPressed), for: .touchUpInside)
+        doneButton.contentHorizontalAlignment = .right
+        doneButton.addTarget(nil, action: #selector(GameViewController.dieSetPressed), for: .touchUpInside)
         
         
         dropButton.backgroundColor = UIColor.clear
@@ -103,7 +117,8 @@ class DiceSetView : UIView {
         dropButton.setTitle("Drop dice", for: .normal)
         dropButton.titleLabel?.textAlignment = .center
         dropButton.titleLabel?.font = UIFont(name: "Arial", size: 18)
-        dropButton.addTarget(self.superview, action: #selector(GameViewController.dieSetPressed), for: .touchUpInside)
+        dropButton.contentHorizontalAlignment = .center
+        dropButton.addTarget(nil, action: #selector(GameViewController.dieSetPressed), for: .touchUpInside)
         
         cancelButton.backgroundColor = UIColor.clear
         //donateButton.setTitle("Donate", for: .normal)
@@ -111,7 +126,8 @@ class DiceSetView : UIView {
         cancelButton.setTitle("Cancel", for: .normal)
         cancelButton.titleLabel?.textAlignment = .left
         cancelButton.titleLabel?.font = UIFont(name: "Arial", size: 18)
-        cancelButton.addTarget(self.superview, action: #selector(GameViewController.donePressed), for: .touchUpInside)
+        cancelButton.contentHorizontalAlignment = .left
+        cancelButton.addTarget(nil, action: #selector(GameViewController.donePressed), for: .touchUpInside)
         
         scrollView.addSubview(settingView)
         self.addSubview(doneButton)
