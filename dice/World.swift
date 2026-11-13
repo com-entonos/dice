@@ -281,11 +281,13 @@ class World: SCNScene, SCNPhysicsContactDelegate {
                         if r.z < -maxZ { r.z = -maxZ; v.z = abs(v.z) * Float(0.9); escaped = true }
                         else if r.z > maxZ { r.z = maxZ; v.z = -abs(v.z) * Float(0.9); escaped = true }
 
-                        if r.y < 0 { r.y = pad; v.y = abs(v.y) * 0.1; escaped = true }
-                        else if r.y > maxY { r.y = maxY; v.y = -abs(v.y) * 0.5; escaped = true }
+                        if r.y < 0 { r.y = die.inR; v.y = abs(v.y) * 0.1; escaped = true }
+                        else if r.y > maxY { r.y = maxY; v.y = -abs(v.y) * 0.1; escaped = true }
 
                         if escaped {
+                            die.physicsBody!.clearAllForces()
                             die.simdPosition = r
+                     //     die.presentation.simdPosition = r
                             die.physicsBody!.velocity = v
                             die.physicsBody!.resetTransform()
                         }

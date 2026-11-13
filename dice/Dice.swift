@@ -301,7 +301,7 @@ class Coin : Dice {  // coin, 2 sided die
         self.name = "die2"
         self.diffuseName = "coin"
         self.dieType = .dice2
-        self.dieInR = size * 0.15 / 2
+        self.dieInR = size * 0.22 / 2
         self.dieCircumR = size0
         self.dieMidR = size0 / 2 //size * 0.15 * 2 //size0 / 4
         
@@ -312,7 +312,7 @@ class Coin : Dice {  // coin, 2 sided die
             let parent = SCNNode()
             //parent.addChildNode(SCNNode(geometry: SCNCylinder(radius: 1.05 * size0, height: size*0.05)))
             //parent.addChildNode(SCNNode(geometry: SCNTube(innerRadius: 0.5 * size0, outerRadius: 0.6 * size0, height: size*0.3)))
-            parent.addChildNode(SCNNode(geometry: SCNCylinder(radius: size0, height: size*0.15)))
+            parent.addChildNode(SCNNode(geometry: SCNCylinder(radius: size0, height: size*0.22)))
             //parent.addChildNode(SCNNode(geometry: SCNCylinder(radius: size0, height: size*0.25)))
             parent.addChildNode(SCNNode(geometry: SCNCylinder(radius: size0*1.02, height: size*0.02)))
 
