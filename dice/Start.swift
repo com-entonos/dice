@@ -137,8 +137,8 @@ class StartView : UIView, UIPickerViewDataSource, UIPickerViewDelegate, UIScroll
 
     }
     
-    func game() -> Games { // game changed
-        return Games(rawValue: gamePicker.selectedRow(inComponent: 0)-1)!
+    func game() -> Games? { // game changed
+        return Games(rawValue: gamePicker.selectedRow(inComponent: 0)-1)
     }
     
     func numberOfComponents(in pickerView: UIPickerView) -> Int {

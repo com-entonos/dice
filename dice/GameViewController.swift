@@ -104,6 +104,17 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
         _game.hud?.resize(viewBounds: self.view.bounds, safeArea: overlayBounds)
         layoutButtons()
         
+        if let currentStart = startView {
+            let selectedRow = currentStart.gamePicker.selectedRow(inComponent: 0)
+            currentStart.removeFromSuperview()
+            let updatedStart = StartView(frame: self.view.bounds, safe: overlayBounds, game: _game!)
+            updatedStart.gamePicker.selectRow(selectedRow, inComponent: 0, animated: false)
+            updatedStart.pickerView(updatedStart.gamePicker, didSelectRow: selectedRow, inComponent: 0)
+            startView = updatedStart
+            self.view.addSubview(updatedStart)
+            return
+        }
+        
         if startView != nil || settingView != nil || diceNumberView != nil ||
            diceSetView != nil || helpView != nil || helpDetailView != nil || historyView != nil {
             donePressed(sender: nil)
@@ -585,7 +596,7 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
         if helpView != nil { helpView!.removeFromSuperview()}; helpView = nil  // dismiss help
         if startView != nil {
 //print(startView!.game())
-            let game = startView!.game()
+            let game = startView!.game() ?? .freeplay
             startNewGame(game: game)
             _game.throwOption = _game.defaultTap(game: game)
             startView!.removeFromSuperview()
