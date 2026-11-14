@@ -265,30 +265,27 @@ class World: SCNScene, SCNPhysicsContactDelegate {
                 var allStop = false // all stopped moving/rotatin, essentially?
                 for die in _dice {  // loop over all dice
                     if die.physicsBody?.type == .dynamic {  // we might be doing animation to move dice around, so don't get confused.
-                        
-                        // force no die escape the table box...
+            /*
                         var r = die.presentation.simdPosition
                         var v = die.physicsBody!.velocity
+                        // force no die escape the table box...
                         let pad = die.circumR
                         let maxX = Float(wScale / 2)
                         let maxZ = Float(hScale / 2)
                         var escaped = false
 
-                        if abs(r.x) > maxX { let s = Float(r.x.sign == .minus ? 1.0 : -1.0); r.x = (pad - maxX) * s; v.x = s * abs(v.x) * 0.9; escaped = true}
-
-                        if abs(r.z) > maxZ { let s = Float(r.z.sign == .minus ? 1.0 : -1.0); r.z = (pad - maxZ) * s; v.z = s * abs(v.z) * 0.9; escaped = true}
-
-                        if r.y < 0 { r.y = die.inR; v.y = abs(v.y) * 0.1; escaped = true }
-
+                        if abs(r.x) > maxX { let s: Float = r.x.sign == .minus ? 1.0 : -1.0; r.x = (pad - maxX) * s; v.x = s * abs(v.x) * 0.9; escaped = true}
+                        if abs(r.z) > maxZ { let s: Float = r.z.sign == .minus ? 1.0 : -1.0; r.z = (pad - maxZ) * s; v.z = s * abs(v.z) * 0.9; escaped = true}
+                        if !(r.y > 0) { r.y = die.inR; v.y = abs(v.y) * 0.1; escaped = true }
                         if escaped {
                      //     die.physicsBody!.clearAllForces()
                             die.simdPosition = r
-                     //     die.presentation.simdPosition = r
                             die.physicsBody!.velocity = v
                             die.physicsBody!.resetTransform()
-                        }
-                        
-                        let y = die.presentation.simdPosition.y
+                        } */
+                        let v = die.physicsBody!.velocity
+                        let r = die.presentation.simdPosition
+                        let y = r.y
                         if y > launchHeight/4 { startTime = time }
                         let I = die.inertiaByMass
                         let w = die.physicsBody!.angularVelocity
@@ -741,15 +738,15 @@ class World: SCNScene, SCNPhysicsContactDelegate {
             if node.name! == "camera" {
                 node.position = SCNVector3(x: 0, y: cameraY, z: 0)
             } else if node.name! == "lid" {
-                node.position = SCNVector3(x: 0, y: Float(dScale), z: 0)
+                node.position = SCNVector3(x: 0, y: Float(dScale) + 1.0, z: 0)
             } else if node.name! == "wall-left" {
-                node.position = SCNVector3(x: Float(-wScale/2), y: Float(dScale/2), z: 0)
+                node.position = SCNVector3(x: Float(-wScale/2) - 1.0, y: Float(dScale/2), z: 0)
             } else if node.name! == "wall-right" {
-                node.position = SCNVector3(x: Float(wScale/2), y: Float(dScale/2), z: 0)
+                node.position = SCNVector3(x: Float(wScale/2) + 1.0, y: Float(dScale/2), z: 0)
             } else if node.name! == "wall-front" {
-                node.position = SCNVector3(x: 0, y: Float(dScale/2), z: Float(-hScale/2))
+                node.position = SCNVector3(x: 0, y: Float(dScale/2), z: Float(-hScale/2) - 1.0)
             } else if node.name! == "wall-back" {
-                node.position = SCNVector3(x: 0, y: Float(dScale/2), z: Float(hScale/2))
+                node.position = SCNVector3(x: 0, y: Float(dScale/2), z: Float(hScale/2) + 1.0)
             }
         }
 //print("ar:\(ar), width:\(width), height:\(height)")
@@ -829,82 +826,73 @@ class World: SCNScene, SCNPhysicsContactDelegate {
         floorGeometry.firstMaterial!.writesToDepthBuffer = true
         floorGeometry.firstMaterial!.readsFromDepthBuffer = true
         floorGeometry.reflectivity = 0.35
-        floorGeometry.reflectionFalloffEnd = CGFloat(dScale)// cameraY)
+        floorGeometry.reflectionFalloffEnd = CGFloat(dScale)
+        floorGeometry.reflectionCategoryBitMask = 1 //0x1 << 2
         let floorNode = SCNNode(geometry: floorGeometry)
-        floorNode.physicsBody = SCNPhysicsBody(type: .static, shape: nil)
-        floorNode.physicsBody?.friction = 1.0
-        floorNode.physicsBody?.restitution = 0.1
-        floorNode.physicsBody?.categoryBitMask = 2+4
         floorNode.name = "floor"
         floorNode.categoryBitMask = 2+4 //0x1 << 2
-        floorGeometry.reflectionCategoryBitMask = 1 //0x1 << 2
-        
-        //second floor (in case the die goes through the floor
-        /*let floorNode1 = SCNNode(geometry: floorGeometry)
+
+        // 2. Solid 1.0 m thick physics floor (top face sits flush at y = 0.0)
+        let solidFloorGeometry = SCNBox(width: wScale * 5, height: 2.0, length: hScale * 5, chamferRadius: 0)
+        solidFloorGeometry.firstMaterial?.diffuse.contents = UIColor.clear
+        let floorNode1 = SCNNode(geometry: solidFloorGeometry)
+        floorNode1.position = SCNVector3(x: 0, y: -1.0, z: 0)
         floorNode1.physicsBody = SCNPhysicsBody(type: .static, shape: nil)
         floorNode1.physicsBody?.friction = 1.0
         floorNode1.physicsBody?.restitution = 0.1
-        floorNode1.physicsBody?.categoryBitMask = 2
-        floorNode1.position = SCNVector3(x: 0, y: Float(-2*dieSize), z: 0)
-        floorNode1.name = "second-floor"
-        floorNode1.categoryBitMask = 2+4 //0x1 << 2
-        floorGeometry.reflectionCategoryBitMask = 0//1//0x1 << 0*/
+        floorNode1.physicsBody?.categoryBitMask = 2 + 4
+        floorNode1.name = "solid-floor"
+        floorNode1.categoryBitMask = 2 + 4
         
         //lid
-        let lidGeometry = SCNPlane(width: wScale * 5, height: hScale * 5)
+        let lidGeometry = SCNBox(width: wScale * 5, height: 2.0, length: hScale * 5, chamferRadius: 0)
         let lidNode = SCNNode(geometry: lidGeometry)
-        lidNode.eulerAngles = SCNVector3(x: Float.pi/2, y: 0, z: 0)
-        lidNode.position = SCNVector3(x: 0, y: Float(dScale), z: 0)
+        lidNode.position = SCNVector3(x: 0, y: Float(dScale) + 1.0, z: 0)
         lidNode.physicsBody = SCNPhysicsBody(type: .static, shape: nil)
         lidNode.physicsBody?.friction = 0.1
         lidNode.physicsBody?.categoryBitMask = 2
         lidNode.name = "lid"
-        lidNode.categoryBitMask = 2 //0x1 << 2
+        lidNode.categoryBitMask = 2
         
-        //left wall
-        let sideWallGeometry = SCNPlane(width: hScale * 5, height: dScale * 5)
+        //left & right walls (1.0m thick along X; inner faces stay at ±wScale/2)
+        let sideWallGeometry = SCNBox(width: 2.0, height: dScale * 5, length: hScale * 5, chamferRadius: 0)
         let leftWallNode = SCNNode(geometry: sideWallGeometry)
-        leftWallNode.eulerAngles = SCNVector3(x: 0, y: Float.pi/2, z: 0)
-        leftWallNode.position = SCNVector3(x: Float(-wScale/2), y: Float(dScale/2), z: 0)
+        leftWallNode.position = SCNVector3(x: Float(-wScale/2) - 1.0, y: Float(dScale/2), z: 0)
         leftWallNode.physicsBody = SCNPhysicsBody(type: .static, shape: nil)
         leftWallNode.physicsBody?.restitution = 0.9
         leftWallNode.physicsBody?.friction = 0.1
         leftWallNode.physicsBody?.categoryBitMask = 2
         leftWallNode.name = "wall-left"
         leftWallNode.categoryBitMask = 2 //0x1 << 2
-        
-        //right wall
+
         let rightWallNode = SCNNode(geometry: sideWallGeometry)
-        rightWallNode.eulerAngles = SCNVector3(x: 0, y: -Float.pi/2, z: 0)
-        rightWallNode.position = SCNVector3(x: Float(wScale/2), y: Float(dScale/2), z: 0)
+        rightWallNode.position = SCNVector3(x: Float(wScale/2) + 1.0, y: Float(dScale/2), z: 0)
         rightWallNode.physicsBody = SCNPhysicsBody(type: .static, shape: nil)
         rightWallNode.physicsBody?.restitution = 0.9
         rightWallNode.physicsBody?.friction = 0.1
         rightWallNode.physicsBody?.categoryBitMask = 2
         rightWallNode.name = "wall-right"
         rightWallNode.categoryBitMask = 2 //0x1 << 2
-        
-        //front wall
-        let endWallGeometry = SCNPlane(width: wScale * 5, height: dScale * 5)
+
+        //front & back walls (1.0m thick along Z; inner faces stay at ±hScale/2)
+        let endWallGeometry = SCNBox(width: wScale * 5, height: dScale * 5, length: 2.0, chamferRadius: 0)
         let frontWallNode = SCNNode(geometry: endWallGeometry)
-        frontWallNode.position = SCNVector3(x: 0, y: Float(dScale/2), z: Float(-hScale/2))
+        frontWallNode.position = SCNVector3(x: 0, y: Float(dScale/2), z: Float(-hScale/2) - 1.0)
         frontWallNode.physicsBody = SCNPhysicsBody(type: .static, shape: nil)
         frontWallNode.physicsBody?.restitution = 0.9
         frontWallNode.physicsBody?.friction = 0.1
         frontWallNode.physicsBody?.categoryBitMask = 2
         frontWallNode.name = "wall-front"
-        frontWallNode.categoryBitMask = 2//0x1 << 2
-        
-        //back wall
+        frontWallNode.categoryBitMask = 2 //0x1 << 2
+
         let backWallNode = SCNNode(geometry: endWallGeometry)
-        backWallNode.eulerAngles = SCNVector3(x: 0, y: Float.pi, z: 0)
-        backWallNode.position = SCNVector3(x: 0, y: Float(dScale/2), z: Float(hScale/2))
+        backWallNode.position = SCNVector3(x: 0, y: Float(dScale/2), z: Float(hScale/2) + 1.0)
         backWallNode.physicsBody = SCNPhysicsBody(type: .static, shape: nil)
         backWallNode.physicsBody?.restitution = 0.9
         backWallNode.physicsBody?.friction = 0.1
         backWallNode.physicsBody?.categoryBitMask = 2
         backWallNode.name = "wall-back"
-        backWallNode.categoryBitMask = 2//0x1 << 2
+        backWallNode.categoryBitMask = 2
         
         //color walls back
         let blackMaterial = SCNMaterial()
@@ -916,6 +904,7 @@ class World: SCNScene, SCNPhysicsContactDelegate {
         self.rootNode.addChildNode(cameraNode)
         self.rootNode.addChildNode(lightNode2)
         self.rootNode.addChildNode(floorNode)
+        self.rootNode.addChildNode(floorNode1)
         self.rootNode.addChildNode(leftWallNode)
         self.rootNode.addChildNode(rightWallNode)
         self.rootNode.addChildNode(frontWallNode)
