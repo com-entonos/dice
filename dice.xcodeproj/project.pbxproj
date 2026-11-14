@@ -17,6 +17,7 @@
 		2C63B715234CE2C800B5528C /* DiceNumber.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C63B714234CE2C800B5528C /* DiceNumber.swift */; };
 		2C77335B30A6571D008C0EEC /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C77335A30A6571D008C0EEC /* SceneDelegate.swift */; };
 		2C77335D30A82443008C0EEC /* DiceShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C77335C30A82443008C0EEC /* DiceShortcuts.swift */; };
+		2C77336030A8FABB008C0EEC /* AppIntents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2C77335F30A8FABB008C0EEC /* AppIntents.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		2C897C2923399C1F00B4ECA6 /* SettingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C897C2823399C1F00B4ECA6 /* SettingView.swift */; };
 		2C8C739D24873E0400452FF9 /* History.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C8C739C24873E0400452FF9 /* History.swift */; };
 		2C8C739F2488A98600452FF9 /* Start.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C8C739E2488A98600452FF9 /* Start.swift */; };
@@ -40,6 +41,7 @@
 		2C63B714234CE2C800B5528C /* DiceNumber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiceNumber.swift; sourceTree = "<group>"; };
 		2C77335A30A6571D008C0EEC /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		2C77335C30A82443008C0EEC /* DiceShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiceShortcuts.swift; sourceTree = "<group>"; };
+		2C77335F30A8FABB008C0EEC /* AppIntents.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppIntents.framework; path = System/Library/Frameworks/AppIntents.framework; sourceTree = SDKROOT; };
 		2C897C2823399C1F00B4ECA6 /* SettingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingView.swift; sourceTree = "<group>"; };
 		2C8C739C24873E0400452FF9 /* History.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = History.swift; sourceTree = "<group>"; };
 		2C8C739E2488A98600452FF9 /* Start.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Start.swift; sourceTree = "<group>"; };
@@ -59,16 +61,26 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2C77336030A8FABB008C0EEC /* AppIntents.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		2C77335E30A8FABB008C0EEC /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				2C77335F30A8FABB008C0EEC /* AppIntents.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		2CE99A0A231DBD7900CDBCD4 = {
 			isa = PBXGroup;
 			children = (
 				2CE99A15231DBD7900CDBCD4 /* dice */,
+				2C77335E30A8FABB008C0EEC /* Frameworks */,
 				2CE99A14231DBD7900CDBCD4 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -346,7 +358,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 9;
 				INFOPLIST_FILE = dice/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Dice Pro Simulator";
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
@@ -369,7 +381,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 9;
 				INFOPLIST_FILE = dice/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Dice Pro Simulator";
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
