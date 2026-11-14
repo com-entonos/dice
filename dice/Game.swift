@@ -8,7 +8,6 @@
 
 import UIKit
 import SceneKit
-import AudioToolbox.AudioServices
 
 enum Games : Int, CaseIterable {
   //case freeplay = 0, midnight, pig, ship, craps, aces5, aces, horror
@@ -286,7 +285,6 @@ class Game {
         if canAddRemove {
             if let die = objectTapped as? Dice { // remove the die
                 world.destroyDie(die)
-                die.die()
                 hud!.toClear()
             }
         }
