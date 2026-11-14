@@ -632,7 +632,7 @@ class World: SCNScene, SCNPhysicsContactDelegate {
     
     func roll(_ pos: CGPoint,_ toggle: Bool = false) { roll(v: randomThrow(), frot: 0, pos: pos, toggle) }
     
-    func roll(_ toggle: Bool = false) { roll(v: randomThrow(), frot: 0, pos: CGPoint(x: width/2, y: height/2), toggle) }
+    func roll(_ toggle: Bool = false,_ frot: Float = 0.0) { roll(v: randomThrow(), frot: frot, pos: CGPoint(x: width/2, y: height/2), toggle) }
     
     func roll(v: SCNVector3, frot: Float, pos: CGPoint, _ toggle: Bool = false) {  // roll all dice (or just the selection if exists
         if !(dieSelection.count > 0) { dieSelection = Array(Set(_dice).subtracting(dieHold)) }
