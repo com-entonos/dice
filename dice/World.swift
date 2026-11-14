@@ -8,7 +8,7 @@
 
 import UIKit
 import SceneKit
-import AudioToolbox.AudioServices
+import AVFoundation
 
 enum WorldState {
     case rolling, rolled, moving
@@ -136,13 +136,15 @@ class World: SCNScene, SCNPhysicsContactDelegate {
     var dice: [Dice] { // return the array of dice on the table
         get { return _dice }
     }
-    var sound: Bool { // turn on/off sound by being contactDelegate nor not
+    var sound: Bool { // turn on/off sound by being contactDelegate or not
         get { return self.physicsWorld.contactDelegate != nil }
         set (value) {
             if value {
                 self.physicsWorld.contactDelegate = self
+                soundEngine.setEnabled(true)
             } else {
                 self.physicsWorld.contactDelegate = nil
+                soundEngine.setEnabled(false)
             }
         }
     }
@@ -358,6 +360,7 @@ class World: SCNScene, SCNPhysicsContactDelegate {
     func destroyDie(_ die: Dice) {
         unselectDie(die: die)
         unholdDie(die: die)
+        soundEngine.removeNode(die)
         _dice.removeAll(where: { $0 == die })
         die.die()
     }
@@ -635,6 +638,7 @@ class World: SCNScene, SCNPhysicsContactDelegate {
         if !(dieSelection.count > 0) { dieSelection = Array(Set(_dice).subtracting(dieHold)) }
         if !(dieSelection.count > 0) { return }
         clearUnReDo()
+        soundEngine.reset()
         
         for die in _dice { die.physicsBody?.type = .static } // assume they don't move
         
@@ -915,37 +919,12 @@ class World: SCNScene, SCNPhysicsContactDelegate {
     }
 
     func physicsWorld(_ world: SCNPhysicsWorld, didEnd contact: SCNPhysicsContact) {  // just for sound
-        //print("contact: \(contact.nodeA.name) \(contact.nodeB.name) \(contact.collisionImpulse)")
-        if contact.collisionImpulse > 0.25 {
-            
-            let vol = 1.3 * (Float(contact.collisionImpulse) - 0.25) / (5 - 0.25) + 0.2
-            if ((contact.nodeA as? Coin) != nil) || ((contact.nodeB as? Coin) != nil) {
-                //let vol = 1.3 * (Float(contact.collisionImpulse) - 0.25) / (5 - 0.25) + 0.2 //+ 0.6
-                dieAudio1.volume = min(1.5, max(0.2, vol))
-                contact.nodeA.runAction(SCNAction.playAudio(dieAudio1, waitForCompletion: false))
-                //print("Contact: \(contact.nodeA.name) \(contact.nodeB.name) \(contact.collisionImpulse) \(vol)")
-            } else { //if contact.collisionImpulse > 0.25 { /**/
-                //let vol = 1.3 * (Float(contact.collisionImpulse) - 0.25) / (5 - 0.25) + 0.2
-                dieAudio.volume = min(1.5, max(0.2, vol))
-                //let _ = GameAudioPlayer(source: dieAudio, node: contact.nodeA)
-                contact.nodeA.runAction(SCNAction.playAudio(dieAudio, waitForCompletion: false))
-                //print("contact: \(contact.nodeA.name) \(contact.nodeB.name) \(contact.collisionImpulse) \(vol)")
-            }
-        }
+        let minImpulse: CGFloat = _dice.count > 40 ? 0.25 : 0.08
+        guard contact.collisionImpulse > minImpulse else { return }
+        soundEngine.play(contact: contact, tableWidth: Float(wScale))
     }
     
-    lazy var dieAudio : SCNAudioSource = {  // sound for collisions
-        let source = SCNAudioSource(fileNamed: "MyAssets/diceSound04.wav")!
-        source.shouldStream = false
-        source.volume = 0.0
-        return source
-    }()
-    lazy var dieAudio1 : SCNAudioSource = {  // sound for collisions
-        let source = SCNAudioSource(fileNamed: "MyAssets/coinSound.wav")!
-        source.shouldStream = false
-        source.volume = 0.0
-        return source
-    }()
+    private let soundEngine = DiceSoundEngine()
     
     init(size: CGRect) {
         
@@ -954,12 +933,6 @@ class World: SCNScene, SCNPhysicsContactDelegate {
         super.init()
         self.background.contents = UIColor.black
         addGameBoard()
-        
-        // damn delay!
-        dieAudio.load()
-        dieAudio1.load()
-        self.rootNode.runAction(SCNAction.playAudio(dieAudio, waitForCompletion: false))
-        self.rootNode.runAction(SCNAction.playAudio(dieAudio1, waitForCompletion: false))
     }
     
     required init(coder: NSCoder) {
@@ -997,18 +970,88 @@ class World: SCNScene, SCNPhysicsContactDelegate {
 
 }
 
-class GameAudioPlayer : SCNAudioPlayer {
-    private var _node: SCNNode!
-    
-    init(source: SCNAudioSource, node: SCNNode) {
-        super.init(source: source)
-        
-        node.addAudioPlayer(self)
-        _node = node
-        
-        self.didFinishPlayback = {
-            self._node.removeAudioPlayer(self)
+class DiceSoundEngine {
+    private var diePlayers = [AVAudioPlayer]()
+    private var coinPlayers = [AVAudioPlayer]()
+    private var lastHitTime = [ObjectIdentifier: TimeInterval]()
+    private var lastGlobalTime: TimeInterval = 0
+    private var lastHapticTime: TimeInterval = 0
+    private let haptic = UIImpactFeedbackGenerator(style: .light)
+    private let queue = DispatchQueue(label: "com.dice.sound", qos: .userInitiated)
+    private var isEnabled = true
+
+    init() {
+        haptic.prepare()
+        setEnabled(true)
+        queue.async { [weak self] in
+            let dice = Self.makePool(name: "diceSound04", count: 8)
+            let coins = Self.makePool(name: "coinSound", count: 6)
+            DispatchQueue.main.async {
+                self?.diePlayers = dice
+                self?.coinPlayers = coins
+            }
         }
     }
-    
+
+    private static func makePool(name: String, count: Int) -> [AVAudioPlayer] {
+        guard let url = Bundle.main.url(forResource: name, withExtension: "wav", subdirectory: "MyAssets") else { return [] }
+        return (0..<count).compactMap { _ in
+            guard let p = try? AVAudioPlayer(contentsOf: url) else { return nil }
+            p.enableRate = true
+            p.prepareToPlay()
+            return p
+        }
+    }
+
+    func setEnabled(_ enabled: Bool) {
+        isEnabled = enabled
+        if enabled {
+            haptic.prepare()
+            queue.async {
+                let session = AVAudioSession.sharedInstance()
+                try? session.setCategory(.ambient, options: .mixWithOthers)
+                try? session.setActive(true)
+            }
+        } else {
+            (diePlayers + coinPlayers).filter(\.isPlaying).forEach { $0.stop() }
+            reset()
+        }
+    }
+
+    func removeNode(_ node: SCNNode) { lastHitTime.removeValue(forKey: ObjectIdentifier(node)) }
+    func reset() { lastHitTime.removeAll(); lastGlobalTime = 0 }
+
+    func play(contact: SCNPhysicsContact, tableWidth: Float) {
+        let impulse = Float(contact.collisionImpulse)
+        let now = ProcessInfo.processInfo.systemUptime
+        let (idA, idB) = (ObjectIdentifier(contact.nodeA), ObjectIdentifier(contact.nodeB))
+
+        guard isEnabled, impulse > 0.08, now - lastGlobalTime >= 0.018,
+              now - (lastHitTime[idA] ?? 0) >= 0.035, now - (lastHitTime[idB] ?? 0) >= 0.035 else { return }
+
+        let isCoin = contact.nodeA is Coin || contact.nodeB is Coin
+        guard let player = (isCoin ? coinPlayers : diePlayers).first(where: { !$0.isPlaying }) else { return }
+
+        lastGlobalTime = now
+        lastHitTime[idA] = now
+        lastHitTime[idB] = now
+
+        let norm = min(1.0, (impulse - 0.08) / 4.5)
+        let bothDice = contact.nodeA is Dice && contact.nodeB is Dice
+        let hitWall = contact.nodeA.name?.hasPrefix("wall-") == true || contact.nodeB.name?.hasPrefix("wall-") == true
+        if hitWall { return } // comment out to re-enable wall sounds
+
+        let baseRate: Float = bothDice ? (isCoin ? 1.15 : 1.12) : (hitWall ? 1.00 : 0.86)
+        let panX = contact.contactPoint.x / max(0.1, tableWidth * 0.5)
+
+        player.volume = 0.04 + 0.96 * pow(norm, 0.75)
+        player.rate = baseRate * Float.random(in: 0.90...1.10)
+        player.pan = max(-0.6, min(0.6, panX * 0.6))
+        player.play()
+
+        if impulse > 1.4, now - lastHapticTime > 0.12 {
+            lastHapticTime = now
+            DispatchQueue.main.async { self.haptic.impactOccurred(intensity: CGFloat(norm)) }
+        }
+    }
 }
