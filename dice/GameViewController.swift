@@ -59,6 +59,7 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
         
         _game = Game(size: overlayBounds) // create the Game (which creates the HUD and World)
         _world = _game.world_
+        if #available(iOS 16.0, *) { DiceShortcutBridge.shared.register(viewController: self, game: _game) }
         
         //_sceneView = SCNView(frame: overlayBounds)  // create a SCNView
         _sceneView = SCNView(frame: self.view.bounds) // <-- CHANGE from overlayBounds
