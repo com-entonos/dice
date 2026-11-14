@@ -199,11 +199,18 @@ class HUD {
 
     func result(_ string: NSMutableAttributedString) {
         resultLabel.attributedText = string
-        let x = resultLabel.intrinsicContentSize
-        let r = x.height * ceil(x.width / max(1, resultLabel.frame.width))
-        resultLabel.frame.size.height = r
-        // Align to the bottom of the safe area in UIKit coordinates
-        resultLabel.frame.origin.y = safeRect.maxY - r + 2.5
+        let padX: CGFloat = (safeRect.minX < 16) ? 14 : 2
+        let padBot: CGFloat = ((viewSize.height - safeRect.maxY) < 16) ? 10 : 2
+        let skLeft = safeRect.minX + padX
+        let skRight = safeRect.maxX - ((viewSize.width - safeRect.maxX) < 16 ? 14 : 2)
+        let maxW = max(64, (skRight - skLeft) - 64)
+
+        let fit = resultLabel.sizeThatFits(CGSize(width: maxW, height: .greatestFiniteMagnitude))
+        let w = min(maxW, ceil(fit.width) + 16)
+        let h = ceil(fit.height) + 4
+
+        resultLabel.frame = CGRect(x: safeRect.midX - w / 2, y: safeRect.maxY - padBot - h + 2.5, width: w, height: h
+        )
         resultLabel.isHidden = false
     }
 
