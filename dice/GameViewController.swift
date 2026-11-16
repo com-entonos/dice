@@ -572,8 +572,8 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
             _game.setDiceNumber(diceSet: inv)
         } else {
             _game.setDiceNumber(diceSet: [dieType:Int(sender.currentTitle!)!])
-            _game.hud!.toRoll()
-            _world.rollRandom()
+            //_game.hud!.toRoll()
+            //_world.rollRandom()
         }
         donePressed(sender: sender)
     }
