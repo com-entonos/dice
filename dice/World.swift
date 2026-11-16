@@ -589,11 +589,10 @@ class World: SCNScene, SCNPhysicsContactDelegate {
                 } else {
                     die.defaultColor()
                 }
-                let newRot = simd_mul(q,die.presentation.simdOrientation.inverse)
                 // eye-candy for moving the dice from current to final position
+                let q0 = die.presentation.simdOrientation
                 let composite = SCNAction.group([SCNAction.move(to: SCNVector3(x: r.x, y: r.y, z: r.z), duration: 0.5 ),
-                                                 SCNAction.rotate(by: CGFloat(newRot.angle),
-                                                                  around: SCNVector3(newRot.axis.x, newRot.axis.y, newRot.axis.z), duration: 0.5)])
+                                                 SCNAction.customAction(duration: 0.5) { $0.simdOrientation = simd_slerp(q0, q, Float(min(1.0, $1 / 0.5)))} ])
                 die.physicsBody?.collisionBitMask = 0  // don't care about collisions
                 die.runAction(composite, completionHandler: { () in
                     die.physicsBody?.type = .dynamic
@@ -614,7 +613,11 @@ class World: SCNScene, SCNPhysicsContactDelegate {
         return Array(Set(_dice).subtracting(dieHold)).count
     }
     
-    func randomThrow() -> SCNVector3 { return SCNVector3Zero}
+    //func randomThrow() -> SCNVector3 { return SCNVector3Zero}
+    func randomThrow() -> SCNVector3 {
+        let phi = Float.random(in: 0...(2 * Float.pi))
+        return SCNVector3(x: 0.5 * cos(phi), y: 0, z: 0.5 * sin(phi))
+    }
     
     func rollRandom (_ toggle: Bool = false) {
         let phi = Float.random(in: 0...(2*Float.pi))
@@ -630,7 +633,8 @@ class World: SCNScene, SCNPhysicsContactDelegate {
         }
     }
     
-    func roll(_ pos: CGPoint,_ toggle: Bool = false) { roll(v: randomThrow(), frot: 0, pos: pos, toggle) }
+    //func roll(_ pos: CGPoint,_ toggle: Bool = false) { roll(v: randomThrow(), frot: 0, pos: pos, toggle) }
+    func roll(_ pos: CGPoint, _ toggle: Bool = false) { roll(v: randomThrow(), frot: 0.75, pos: pos, toggle) }
     
     func roll(_ toggle: Bool = false,_ frot: Float = 0.0) { roll(v: randomThrow(), frot: frot, pos: CGPoint(x: width/2, y: height/2), toggle) }
     
@@ -675,13 +679,10 @@ class World: SCNScene, SCNPhysicsContactDelegate {
                 die.physicsBody?.resetTransform()
                 
                 // let's move the die from their positions to throwing positions- translation then rotations, ignoring collisions. just eye candy
-                let newRot = simd_mul(nO,die.presentation.simdOrientation.inverse)  // this is rotation to current orientation to new random orentation: q = q_new * inverse(q_current)
-                //let composite = SCNAction.group([SCNAction.move(to: SCNVector3(x: r.x, y: r.y, z: r.z), duration: 0.1 ),
-                /*let composite = SCNAction.sequence([SCNAction.move(to: SCNVector3(x: r.x, y: r.y, z: r.z), duration: 0.15 ),
-                                                    SCNAction.rotate(by: CGFloat(newRot.angle),
-                                                                     around: SCNVector3(newRot.axis.x, newRot.axis.y, newRot.axis.z), duration: 0.15)])*/
+
+                let q0 = die.safeOr
                 let composite = SCNAction.group([SCNAction.move(to: SCNVector3(x: r.x, y: r.y, z: r.z), duration: 0.2 ),
-                                                 SCNAction.rotate(by: CGFloat(newRot.angle), around: SCNVector3(newRot.axis.x, newRot.axis.y, newRot.axis.z), duration: 0.21)])
+                                                 SCNAction.customAction(duration: 0.2) { $0.simdOrientation = simd_slerp(q0, nO, Float(min(1.0, $1 / 0.2)))} ])
                 die.physicsBody?.collisionBitMask = 0
     //print("\(icc) \(die.physicsBody!.collisionBitMask) \(die)")
                 die.runAction(composite, completionHandler: { () in
@@ -704,6 +705,52 @@ class World: SCNScene, SCNPhysicsContactDelegate {
                 })
             }
         } else {
+            var placed = _dice.filter { !dieSelection.contains($0) }.map { ($0.safePos, $0.circumR) }
+            let maxY = Float(dScale) - 2.0 * maxR
+            var targets = [ObjectIdentifier: simd_float3]()
+
+            for die in dieSelection.sorted(by: { $0.safePos.y < $1.safePos.y }) {
+                let pos = die.safePos
+                let xz = convert(pos: convert(pos: simd_float3(pos.x, 0, pos.z)))
+                var r = simd_float3(xz.x, max(pos.y + 1.1 * die.circumR, 1.5 * die.circumR), xz.z)
+
+                while let hit = placed.first(where: { simd_length(r - $0.0) < die.circumR + $0.1 }), r.y < maxY {
+                    r.y = min(maxY, hit.0.y + die.circumR + hit.1)
+                }
+                placed.append((r, die.circumR))
+                targets[ObjectIdentifier(die)] = r
+            }
+
+            for die in dieSelection {
+                let (nO, q0, pos) = (die.randomOrientation(), die.safeOr, die.safePos)
+                let r = targets[ObjectIdentifier(die)]!
+
+                die.simdOrientation = q0
+                die.simdPosition = pos
+                die.physicsBody?.type = .static
+                die.physicsBody?.resetTransform()
+                die.physicsBody?.collisionBitMask = 0
+
+                let move = SCNAction.move(to: SCNVector3(r.x, r.y, r.z), duration: 0.1)
+                let rot = SCNAction.customAction(duration: 0.1) { $0.simdOrientation = simd_slerp(q0, nO, Float(min(1.0, $1 / 0.1))) }
+
+                die.runAction(.group([move, rot])) {
+                    die.physicsBody?.type = .dynamic
+                    die.physicsBody?.clearAllForces()
+                    die.simdPosition = r
+                    die.simdOrientation = nO
+                    die.physicsBody?.resetTransform()
+
+                    let rndv = SCNVector3(vperp * Float.random(in: -0.25...0.25), vperp * Float.random(in: 0...0.25), vperp * Float.random(in: -0.25...0.25))
+                    die.randomVelocity(SCNVector3(vperp * v.x * Float.random(in: 0.9...1.1) + rndv.x,
+                                                  vperp * 2.5 * Float.random(in: 0.9...1.1) + rndv.y,
+                                                  vperp * v.z * Float.random(in: 0.9...1.1) + rndv.z))
+                    let mass = Float(die.physicsBody!.mass) * 2 * 9.8 * self.launchHeight
+                    die.randomOmega(max(0.25, frot) * Float.random(in: 0.8...1.4) * sqrt(mass / die.physicsBody!.momentOfInertia.y) * 0.5)
+                    die.physicsBody?.collisionBitMask = 3
+                }
+            }
+            /* old way
             for die in dieSelection.shuffled() {
                 die.simdOrientation = die.presentation.simdOrientation
                 let pos = die.presentation.simdPosition
@@ -719,8 +766,7 @@ class World: SCNScene, SCNPhysicsContactDelegate {
                 let mass = Float(die.physicsBody!.mass)*2*9.8*self.launchHeight
                 die.randomOmega((max(0.25, frot) * Float.random(in: 0.8...1.4))*sqrt(mass/inertia!.y)*0.5)
                 die.physicsBody?.collisionBitMask = 3
-            }
-                            
+            } */
         }
         unselectDie(die: nil)
         _state = .rolling  // set state to .rolling
