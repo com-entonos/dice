@@ -100,6 +100,15 @@ class Dice : SCNNode {
         }
     }
     
+    var safePos: simd_float3 {
+        let p = presentation.simdPosition
+        return (simd_length_squared(p) > 0) ? p : simdPosition
+    }
+    var safeOr: simd_quatf {
+        let q = presentation.simdOrientation
+        return (simd_length_squared(q.vector) > 0.5) ? q : simdOrientation
+    }
+    
    /* common functions */
     func die() {
         let moveAction = SCNAction.moveBy(x: 0, y: -1.1 * dieCircumR * 2 - CGFloat(self.presentation.position.y), z: 0, duration: 0.5)
