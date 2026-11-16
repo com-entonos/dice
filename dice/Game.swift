@@ -91,6 +91,12 @@ class Game {
     var world_: World {
         get {return world}
     }
+    var canThrow_: Bool {
+        get { return canThrow }
+    }
+    var tableSize_: CGSize {
+        get { return size }
+    }
     var throwOption : [TapOptions] {
         get {return tapOpt
         }
@@ -187,7 +193,8 @@ class Game {
         if world.numToRoll() > 0 && canThrow {
             hud!.toRoll()
             // set the direction and magnitude of throwing direction
-            let psi = Float(atan2(velOfFlick.y, velOfFlick.x))  // direction of flick
+            //let psi = Float(atan2(velOfFlick.y, velOfFlick.x))  // direction of flick
+            let psi = (speed < 1.0) ? Float.random(in: 0...(2 * Float.pi)) : Float(atan2(velOfFlick.y, velOfFlick.x))  // direction of flick
             let fvel = Float(min(2.5, max(0.5, (2.5 - 0.5) * (speed - 200) / (4000.0 - 200.0) + 0.5)))   // scale over nominal speed
             let frot = Float(min(1.0, max(0.0, angle / (2 * CGFloat.pi))))                                  // how much in rotation vs translation
             //print("fvel: \(fvel) \(frot) \(speed) \(toggle)")
@@ -762,6 +769,3 @@ class Game {
     }
 
 }
-
-
-
