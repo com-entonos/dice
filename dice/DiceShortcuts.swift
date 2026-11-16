@@ -7,7 +7,7 @@
 import UIKit
 import SceneKit
 
-// MARK: - 1. Shortcut Parameter Enums
+// MARK: - Shortcut Parameter Enums
 
 @available(iOS 16.0, macOS 13.0, visionOS 1.0, *)
 enum ShortcutDieType: String, AppEnum {
@@ -15,13 +15,9 @@ enum ShortcutDieType: String, AppEnum {
 
     static var typeDisplayRepresentation = TypeDisplayRepresentation(name: "Die Type")
     static var caseDisplayRepresentations: [ShortcutDieType: DisplayRepresentation] = [
-        .d2: "Coin (d2)",
-        .d4: "d4 (Tetrahedron)",
-        .d6: "d6 (Cube)",
-        .d8: "d8 (Octahedron)",
-        .d10: "d10 (Decahedron)",
-        .d12: "d12 (Dodecahedron)",
-        .d20: "d20 (Icosahedron)"
+        .d2: "Coin (d2)", .d4: "d4 (Tetrahedron)", .d6: "d6 (Cube)",
+        .d8: "d8 (Octahedron)", .d10: "d10 (Decahedron)",
+        .d12: "d12 (Dodecahedron)", .d20: "d20 (Icosahedron)"
     ]
 
     var toDieType: DieType {
@@ -43,8 +39,7 @@ enum ShortcutThrowMethod: String, AppEnum {
 
     static var typeDisplayRepresentation = TypeDisplayRepresentation(name: "Throw Method")
     static var caseDisplayRepresentations: [ShortcutThrowMethod: DisplayRepresentation] = [
-        .tap: "Tap",
-        .swipe: "Swipe"
+        .tap: "Tap", .swipe: "Swipe"
     ]
 }
 
@@ -60,7 +55,7 @@ enum ShortcutLaunchMode: String, AppEnum {
     ]
 }
 
-// MARK: - 2. Physics-to-Shortcuts Bridge
+// MARK: - Physics-to-Shortcuts Bridge
 
 @available(iOS 16.0, macOS 13.0, visionOS 1.0, *)
 @MainActor
@@ -69,110 +64,145 @@ final class DiceShortcutBridge {
     weak var game: Game?
     weak var viewController: GameViewController?
 
+    private var continuation: CheckedContinuation<[Int], Never>?
+    private var observer: NSObjectProtocol?
+    private var idleRestoreTask: Task<Void, Never>?
+
+    private init() {
+        // Persistent observer avoids unbounded AsyncStream buffering across long Shortcut loops.
+        observer = NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("physicsDone"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                guard let self, let cont = self.continuation, self.game?.world_.state != .rolling else { return }
+                self.continuation = nil
+                cont.resume(returning: self.game?.world_.resultDice() ?? [])
+            }
+        }
+    }
+
     func register(viewController: GameViewController, game: Game) {
         self.viewController = viewController
         self.game = game
     }
 
-    func prepareTableIfNeeded() async -> Game? {
-        for _ in 0..<25 where game == nil {
-            try? await Task.sleep(nanoseconds: 100_000_000)
-        }
-        guard let game = game else { return nil }
+    /// Prevents iPhone/iPad Auto-Lock from suspending SceneKit mid-loop; leaves Mac and visionOS untouched.
+    private func keepScreenAwakeIfNeeded() {
+        let idiom = UIDevice.current.userInterfaceIdiom
+        guard !ProcessInfo.processInfo.isiOSAppOnMac, idiom == .phone || idiom == .pad else { return }
 
+        UIApplication.shared.isIdleTimerDisabled = true
+        idleRestoreTask?.cancel()
+        idleRestoreTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            guard !Task.isCancelled else { return }
+            UIApplication.shared.isIdleTimerDisabled = false
+        }
+    }
+
+    /// Ensures the 3D table is loaded, active on iOS/iPadOS if needed, and idle before running an intent.
+    func readyGame<I: AppIntent>(for intent: I) async -> Game? {
+        if game == nil { try? await Task.sleep(nanoseconds: 150_000_000) }
+
+        let isMac = ProcessInfo.processInfo.isiOSAppOnMac
+        let needsOpen = (game == nil) || (!isMac && UIApplication.shared.applicationState != .active)
+        if needsOpen, #available(iOS 26.0, macOS 26.0, visionOS 26.0, *), intent.systemContext.currentMode.canContinueInForeground {
+            try? await intent.continueInForeground(alwaysConfirm: false)
+        }
+
+        for _ in 0..<30 where game == nil { try? await Task.sleep(nanoseconds: 100_000_000) }
+        guard let game else { return nil }
+
+        // Dismiss any open modal sheet so the table is ready for physics.
         if let vc = viewController,
            vc.startView != nil || vc.settingView != nil || vc.diceNumberView != nil ||
            vc.diceSetView != nil || vc.helpView != nil || vc.helpDetailView != nil || vc.historyView != nil {
             vc.donePressed(sender: nil)
         }
+
+        // Wait for any in-flight roll to finish before starting a new command.
+        for _ in 0..<50 where game.world_.state == .rolling { try? await Task.sleep(nanoseconds: 50_000_000) }
         return game
     }
 
-    func waitForPhysicsSettle(trigger: () -> Void) async -> [Int] {
-        let stream = NotificationCenter.default.notifications(named: NSNotification.Name("physicsDone"))
-        trigger()
-        for await _ in stream {
-            return game?.world_.resultDice() ?? []
+    /// Suspends until SceneKit posts "physicsDone" and settles post-roll HUD/audio state.
+    func runAndSettle(_ action: () -> Void) async -> [Int] {
+        keepScreenAwakeIfNeeded()
+
+        if let stale = continuation {
+            continuation = nil
+            stale.resume(returning: game?.world_.resultDice() ?? [])
         }
-        return []
+
+        let results = await withCheckedContinuation { cont in
+            continuation = cont
+            action()
+            if let world = game?.world_, world.state != .rolling {
+                continuation = nil
+                cont.resume(returning: world.resultDice())
+            }
+        }
+
+        try? await Task.sleep(nanoseconds: 30_000_000)
+        return results
     }
 
-    /// Executes a physical throw matching the UI's Tap or Swipe (speed + curl) mechanics
-    func performThrow(
-        method: ShortcutThrowMethod,
-        energy: Double,
-        curl: Double,
-        formation: ShortcutLaunchMode
-    ) async -> [Int] {
-        guard let game = await prepareTableIfNeeded() else { return [] }
+    /// Simulates a human tap or swipe inside the central 50% of the table while honoring game rules (canThrow).
+    func throwDice(game: Game, method: ShortcutThrowMethod, energy: Double, curl: Double, formation: ShortcutLaunchMode) async -> [Int] {
         let world = game.world_
+        guard world.numToRoll() > 0, game.canThrow_ else { return world.resultDice() }
 
-        guard world.numToRoll() > 0 else {
-            return world.resultDice()
+        let toggle = switch formation {
+        case .currentSetting: false
+        case .gathered: world.launchType != .gather
+        case .scattered: world.launchType != .scatter
         }
 
-        let toggleFormation: Bool
-        switch formation {
-        case .currentSetting: toggleFormation = false
-        case .gathered: toggleFormation = (world.launchType != .gather)
-        case .scattered: toggleFormation = (world.launchType == .scatter)
-        }
-        
-        // if (_launchType == .gather && !toggle) || (_launchType == .scatter && toggle)
+        let tableSize = game.tableSize_
+        let touchPos = CGPoint(
+            x: CGFloat.random(in: 0.25...0.75) * tableSize.width,
+            y: CGFloat.random(in: 0.25...0.75) * tableSize.height
+        )
 
-        return await waitForPhysicsSettle {
-            
+        return await runAndSettle {
+            game.timerPhysics?.invalidate()
             switch method {
             case .tap:
                 game.hud?.toRoll()
-                game.timerPhysics?.invalidate()
-                world.roll(toggleFormation)
-                //let angle = Float(min(1.0, max(0.0, curl)) * 2.0 * .pi)
-                //world.roll(toggleFormation, angle)
-                world.roll(toggleFormation, 0.0)
-
+                world.roll(touchPos, toggle)
             case .swipe:
-                let angle = CGFloat(min(1.0, max(0.0, curl)) * 2.0 * .pi)
                 let speed = CGFloat(200.0 + min(1.0, max(0.0, energy)) * 3800.0)
-                let direction = CGFloat.random(in: 0...(2.0 * .pi))
-                let velocity = CGPoint(x: speed * cos(direction), y: speed * sin(direction))
-                let centerScreen = world.convert(pos: simd_float3(0, 0, 0))
-
-                game.flicked(velocity, pos: centerScreen, speed: speed, angle: angle, toggleFormation)
+                let angle = CGFloat(min(1.0, max(0.0, curl)) * 2.0 * .pi)
+                let dir = CGFloat.random(in: 0...(2.0 * .pi))
+                let vel = CGPoint(x: speed * cos(dir), y: speed * sin(dir))
+                game.flicked(vel, pos: touchPos, speed: speed, angle: angle, toggle)
             }
         }
     }
 }
 
-// MARK: - 3. App Intents
+// MARK: - App Intents
 
 @available(iOS 16.0, macOS 13.0, visionOS 1.0, *)
 struct ThrowDiceIntent: AppIntent {
     static var title: LocalizedStringResource = "Throw Dice"
     static var description = IntentDescription("Throws the active dice on the table using a tap or swipe gesture.")
-    static var openAppWhenRun: Bool = true
+    static var openAppWhenRun: Bool = false
 
-    @Parameter(title: "Method", default: .swipe)
-    var method: ShortcutThrowMethod
+    @available(iOS 26.0, macOS 26.0, visionOS 26.0, *)
+    static var supportedModes: IntentModes { [.background, .foreground(.dynamic)] }
 
-    @Parameter(title: "Swipe Speed (0 = Gentle, 1 = Fast)", default: 0.5, controlStyle: .slider, inclusiveRange: (0.0, 1.0))
-    var energy: Double
-
-    @Parameter(title: "Swipe Curl (0 = Straight, 1 = Spin)", default: 0.2, controlStyle: .slider, inclusiveRange: (0.0, 1.0))
-    var curl: Double
-
-    @Parameter(title: "Formation", default: .currentSetting)
-    var formation: ShortcutLaunchMode
+    @Parameter(title: "Method", default: .swipe) var method: ShortcutThrowMethod
+    @Parameter(title: "Swipe Speed (0 = Gentle, 1 = Fast)", default: 0.5, controlStyle: .slider, inclusiveRange: (0.0, 1.0)) var energy: Double
+    @Parameter(title: "Swipe Curl (0 = Straight, 1 = Spin)", default: 0.2, controlStyle: .slider, inclusiveRange: (0.0, 1.0)) var curl: Double
+    @Parameter(title: "Formation", default: .currentSetting) var formation: ShortcutLaunchMode
 
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<[Int]> {
-        let results = await DiceShortcutBridge.shared.performThrow(
-            method: method,
-            energy: energy,
-            curl: curl,
-            formation: formation
-        )
-        return .result(value: results)
+        guard let game = await DiceShortcutBridge.shared.readyGame(for: self) else { return .result(value: []) }
+        return .result(value: await DiceShortcutBridge.shared.throwDice(game: game, method: method, energy: energy, curl: curl, formation: formation))
     }
 }
 
@@ -180,47 +210,26 @@ struct ThrowDiceIntent: AppIntent {
 struct ReplaceDiceIntent: AppIntent {
     static var title: LocalizedStringResource = "Set Dice on Table"
     static var description = IntentDescription("Replaces all dice on the table with a specific type and count.")
-    static var openAppWhenRun: Bool = true
+    static var openAppWhenRun: Bool = false
 
-    @Parameter(title: "Die Type", default: .d6)
-    var dieType: ShortcutDieType
+    @available(iOS 26.0, macOS 26.0, visionOS 26.0, *)
+    static var supportedModes: IntentModes { [.background, .foreground(.dynamic)] }
 
-    @Parameter(title: "Count", default: 2, inclusiveRange: (1, 100))
-    var count: Int
-
-    @Parameter(title: "Throw Immediately", default: true)
-    var throwNow: Bool
-
-    @Parameter(title: "Method", default: .swipe)
-    var method: ShortcutThrowMethod
-
-    @Parameter(title: "Swipe Speed (0 = Gentle, 1 = Fast)", default: 0.5, controlStyle: .slider, inclusiveRange: (0.0, 1.0))
-    var energy: Double
-
-    @Parameter(title: "Swipe Curl (0 = Straight, 1 = Spin)", default: 0.2, controlStyle: .slider, inclusiveRange: (0.0, 1.0))
-    var curl: Double
-
-    @Parameter(title: "Formation", default: .currentSetting)
-    var formation: ShortcutLaunchMode
+    @Parameter(title: "Die Type", default: .d6) var dieType: ShortcutDieType
+    @Parameter(title: "Count", default: 2, inclusiveRange: (1, 100)) var count: Int
+    @Parameter(title: "Throw Immediately", default: true) var throwNow: Bool
+    @Parameter(title: "Method", default: .swipe) var method: ShortcutThrowMethod
+    @Parameter(title: "Swipe Speed (0 = Gentle, 1 = Fast)", default: 0.5, controlStyle: .slider, inclusiveRange: (0.0, 1.0)) var energy: Double
+    @Parameter(title: "Swipe Curl (0 = Straight, 1 = Spin)", default: 0.2, controlStyle: .slider, inclusiveRange: (0.0, 1.0)) var curl: Double
+    @Parameter(title: "Formation", default: .currentSetting) var formation: ShortcutLaunchMode
 
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<[Int]> {
-        guard let game = await DiceShortcutBridge.shared.prepareTableIfNeeded() else {
-            return .result(value: [])
-        }
+        guard let game = await DiceShortcutBridge.shared.readyGame(for: self) else { return .result(value: []) }
         game.setDiceNumber(diceSet: [dieType.toDieType: count])
-
-        let results: [Int]
-        if throwNow {
-            results = await DiceShortcutBridge.shared.performThrow(
-                method: method,
-                energy: energy,
-                curl: curl,
-                formation: formation
-            )
-        } else {
-            results = game.world_.resultDice()
-        }
+        let results = throwNow
+            ? await DiceShortcutBridge.shared.throwDice(game: game, method: method, energy: energy, curl: curl, formation: formation)
+            : game.world_.resultDice()
         return .result(value: results)
     }
 }
@@ -229,19 +238,17 @@ struct ReplaceDiceIntent: AppIntent {
 struct AddDiceIntent: AppIntent {
     static var title: LocalizedStringResource = "Add Dice to Table"
     static var description = IntentDescription("Adds more dice of a chosen type to the existing dice on the table.")
-    static var openAppWhenRun: Bool = true
+    static var openAppWhenRun: Bool = false
 
-    @Parameter(title: "Die Type", default: .d6)
-    var dieType: ShortcutDieType
+    @available(iOS 26.0, macOS 26.0, visionOS 26.0, *)
+    static var supportedModes: IntentModes { [.background, .foreground(.dynamic)] }
 
-    @Parameter(title: "Count", default: 1, inclusiveRange: (1, 50))
-    var count: Int
+    @Parameter(title: "Die Type", default: .d6) var dieType: ShortcutDieType
+    @Parameter(title: "Count", default: 1, inclusiveRange: (1, 50)) var count: Int
 
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<[Int]> {
-        guard let game = await DiceShortcutBridge.shared.prepareTableIfNeeded() else {
-            return .result(value: [])
-        }
+        guard let game = await DiceShortcutBridge.shared.readyGame(for: self) else { return .result(value: []) }
         var inv = game.world_.inventory()
         inv[dieType.toDieType, default: 0] += count
         game.setDiceNumber(diceSet: inv)
@@ -253,20 +260,16 @@ struct AddDiceIntent: AppIntent {
 struct UndoRollIntent: AppIntent {
     static var title: LocalizedStringResource = "Undo Roll"
     static var description = IntentDescription("Reverts the dice on the table to their previous roll.")
-    static var openAppWhenRun: Bool = true
+    static var openAppWhenRun: Bool = false
+
+    @available(iOS 26.0, macOS 26.0, visionOS 26.0, *)
+    static var supportedModes: IntentModes { [.background, .foreground(.dynamic)] }
 
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<[Int]> {
-        guard let game = await DiceShortcutBridge.shared.prepareTableIfNeeded() else {
-            return .result(value: [])
-        }
-        guard game.world_.undoButton.isEnabled else {
-            return .result(value: game.world_.resultDice())
-        }
-        let results = await DiceShortcutBridge.shared.waitForPhysicsSettle {
-            game.undo()
-        }
-        return .result(value: results)
+        guard let game = await DiceShortcutBridge.shared.readyGame(for: self) else { return .result(value: []) }
+        guard game.world_.state == .rolled, game.world_.undoButton.isEnabled else { return .result(value: game.world_.resultDice()) }
+        return .result(value: await DiceShortcutBridge.shared.runAndSettle { game.undo() })
     }
 }
 
@@ -274,20 +277,16 @@ struct UndoRollIntent: AppIntent {
 struct RedoRollIntent: AppIntent {
     static var title: LocalizedStringResource = "Redo Roll"
     static var description = IntentDescription("Restores the previously undone dice roll.")
-    static var openAppWhenRun: Bool = true
+    static var openAppWhenRun: Bool = false
+
+    @available(iOS 26.0, macOS 26.0, visionOS 26.0, *)
+    static var supportedModes: IntentModes { [.background, .foreground(.dynamic)] }
 
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<[Int]> {
-        guard let game = await DiceShortcutBridge.shared.prepareTableIfNeeded() else {
-            return .result(value: [])
-        }
-        guard game.world_.redoButton.isEnabled else {
-            return .result(value: game.world_.resultDice())
-        }
-        let results = await DiceShortcutBridge.shared.waitForPhysicsSettle {
-            game.redo()
-        }
-        return .result(value: results)
+        guard let game = await DiceShortcutBridge.shared.readyGame(for: self) else { return .result(value: []) }
+        guard game.world_.state == .rolled, game.world_.redoButton.isEnabled else { return .result(value: game.world_.resultDice()) }
+        return .result(value: await DiceShortcutBridge.shared.runAndSettle { game.redo() })
     }
 }
 
@@ -295,36 +294,32 @@ struct RedoRollIntent: AppIntent {
 struct GetDiceResultsIntent: AppIntent {
     static var title: LocalizedStringResource = "Get Dice Results"
     static var description = IntentDescription("Reads the current face-up values of all dice on the table.")
-    static var openAppWhenRun: Bool = true
+    static var openAppWhenRun: Bool = false
+
+    @available(iOS 26.0, macOS 26.0, visionOS 26.0, *)
+    static var supportedModes: IntentModes { [.background, .foreground(.dynamic)] }
 
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<[Int]> {
-        guard let game = await DiceShortcutBridge.shared.prepareTableIfNeeded() else {
-            return .result(value: [])
-        }
+        guard let game = await DiceShortcutBridge.shared.readyGame(for: self) else { return .result(value: []) }
         return .result(value: game.world_.resultDice())
     }
 }
 
-// MARK: - 4. Pre-built Siri & Shortcuts Phrases
+// MARK: - App Shortcuts Provider
 
 @available(iOS 16.0, macOS 13.0, visionOS 1.0, *)
 struct DiceAppShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(
             intent: ThrowDiceIntent(),
-            phrases: [
-                "Throw dice in \(.applicationName)",
-                "Roll the dice in \(.applicationName)"
-            ],
+            phrases: ["Throw dice in \(.applicationName)", "Roll the dice in \(.applicationName)"],
             shortTitle: "Throw Dice",
             systemImageName: "dice.fill"
         )
         AppShortcut(
             intent: ReplaceDiceIntent(),
-            phrases: [
-                "Roll \(\.$dieType) in \(.applicationName)"
-            ],
+            phrases: ["Roll \(\.$dieType) in \(.applicationName)"],
             shortTitle: "Set & Throw Dice",
             systemImageName: "die.face.6.fill"
         )
