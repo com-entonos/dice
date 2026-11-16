@@ -130,7 +130,7 @@ class Dice : SCNNode {
                 v1 = Float.random(in: -1.0...1.0)
                 v2 = Float.random(in: -1.0...1.0)
                 mag = v1*v1+v2*v2
-            } while mag >= 1 || mag == 0
+            } while mag >= 1 || mag < 1e-12
             mag = sqrt( -2 * log(mag) / mag) // ugh
             if i == 0 {
                 randomV.w = v1 * mag
