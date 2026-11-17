@@ -172,6 +172,9 @@ class World: SCNScene, SCNPhysicsContactDelegate {
             }
         }
     }
+    var safeSize: CGSize {
+        return rect.size
+    }
     
     func convert(pos: CGPoint) -> simd_float3 {  // convert screen point into World point
         //let minmaxW = (Float(wScale) - sqrt(3)*dieSize)/2
@@ -840,7 +843,7 @@ class World: SCNScene, SCNPhysicsContactDelegate {
         cameraNode.position = SCNVector3(x: 0, y: cameraY, z: 0)  // correct height
         cameraNode.eulerAngles = SCNVector3(x: -Float.pi/2, y: 0, z: 0)  // point down to the floor
         cameraNode.name = "camera"
-        camera.zNear = 0.0
+        camera.zNear = 0.01 //0.0
         
         //ambient light and attatch to the camera
         let ambientLight = SCNLight()
@@ -1006,10 +1009,12 @@ class World: SCNScene, SCNPhysicsContactDelegate {
         if oldWScale > 0 && oldHScale > 0 && !_dice.isEmpty {
             let scaleX = Float(wScale / oldWScale)
             let scaleZ = Float(hScale / oldHScale)
-            for die in _dice {
-                let r = die.presentation.simdPosition
-                die.simdPosition = simd_float3(r.x * scaleX, r.y, r.z * scaleZ)
-                die.physicsBody?.resetTransform()
+            if abs(scaleX - 1.0) > 1e-4 || abs(scaleZ - 1.0) > 1e-4 {
+                for die in _dice {
+                    let r = (_state == .rolling) ? die.presentation.simdPosition : die.simdPosition
+                    die.simdPosition = simd_float3(r.x * scaleX, r.y, r.z * scaleZ)
+                    die.physicsBody?.resetTransform()
+                }
             }
         }
     }

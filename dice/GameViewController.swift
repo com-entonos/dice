@@ -64,6 +64,8 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
             DiceAppShortcuts.updateAppShortcutParameters()
         }
         
+        NotificationCenter.default.addObserver(self, selector: #selector(appDidBecomeActive), name: UIApplication.didBecomeActiveNotification, object: nil)
+        
         //_sceneView = SCNView(frame: overlayBounds)  // create a SCNView
         _sceneView = SCNView(frame: self.view.bounds) // <-- CHANGE from overlayBounds
         _sceneView.autoresizingMask = [.flexibleWidth, .flexibleHeight] // <-- ADD
@@ -100,6 +102,7 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
         
         _sceneView.frame = self.view.bounds
         
+        guard UIApplication.shared.applicationState != .background else { return }
         let newBounds = self.view.safeAreaLayoutGuide.layoutFrame
         guard newBounds != overlayBounds && newBounds.width > 0 && newBounds.height > 0 else { return }
         overlayBounds = newBounds
@@ -666,4 +669,18 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
         return true
     }
     
+    @objc private func appDidBecomeActive() {
+        guard _sceneView != nil, _world != nil else { return }
+        // 1. Ensure bounds and camera projection match the active window
+        _sceneView.frame = self.view.bounds
+        let currentSafe = self.view.safeAreaLayoutGuide.layoutFrame
+        if currentSafe.width > 0 && currentSafe.height > 0 {
+            overlayBounds = currentSafe
+            _world.resize(to: overlayBounds)
+            _game.hud?.resize(viewBounds: self.view.bounds, safeArea: overlayBounds)
+            layoutButtons()
+        }
+        _sceneView.setNeedsDisplay()
+    }
+
 }

@@ -23,8 +23,6 @@ class Game {
     private var _hud : HUD?
     private var _history : History? = nil
     private var world : World!
-    private var size : CGSize!
-    private var rect : CGRect!
     
     // vars for applying game rules
     private var numRolls = 0     // for craps and ship
@@ -95,7 +93,7 @@ class Game {
         get { return canThrow }
     }
     var tableSize_: CGSize {
-        get { return size }
+        get { return world.safeSize }
     }
     var throwOption : [TapOptions] {
         get {return tapOpt
@@ -138,8 +136,9 @@ class Game {
                 if i+1 > num { world.destroyDie(d)}
             }
         } else if dice.filter({$0.dieType == type}).count < num {
+            let currentSize = world.safeSize
             for _ in 1...(num-dice.filter({$0.dieType == type}).count) {
-                world.addDie(CGPoint(x: CGFloat.random(in: 0.1...0.9) * size.width, y: CGFloat.random(in: 0.1...0.9) * size.height), type: type)
+                world.addDie(CGPoint(x: CGFloat.random(in: 0.1...0.9) * currentSize.width, y: CGFloat.random(in: 0.1...0.9) * currentSize.height), type: type)
             }
         }
         world.unselectDie(die: nil) //clear any selection or hold
@@ -753,8 +752,6 @@ class Game {
 
     //init(size: CGSize) {
     init(size: CGRect) { // size is the rect that gives the 'safe area'
-        self.size = size.size
-        self.rect = size
         self.world = World(size: size)
         self.world.sound = soundOn
         _hud = HUD(size: size) // create HUD
