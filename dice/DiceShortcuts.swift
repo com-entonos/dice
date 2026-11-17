@@ -195,8 +195,8 @@ struct ThrowDiceIntent: AppIntent {
     static var supportedModes: IntentModes { [.background, .foreground(.dynamic)] }
 
     @Parameter(title: "Method", default: .swipe) var method: ShortcutThrowMethod
-    @Parameter(title: "Swipe Speed (0 = Gentle, 1 = Fast)", default: 0.5, controlStyle: .slider, inclusiveRange: (0.0, 1.0)) var energy: Double
-    @Parameter(title: "Swipe Curl (0 = Straight, 1 = Spin)", default: 0.2, controlStyle: .slider, inclusiveRange: (0.0, 1.0)) var curl: Double
+    @Parameter(title: "Swipe Speed (0 = Gentle, 1 = Fast)", default: 0.0, controlStyle: .slider, inclusiveRange: (0.0, 1.0)) var energy: Double
+    @Parameter(title: "Swipe Curl (0 = Straight, 1 = Spin)", default: 0.0, controlStyle: .slider, inclusiveRange: (0.0, 1.0)) var curl: Double
     @Parameter(title: "Formation", default: .currentSetting) var formation: ShortcutLaunchMode
 
     @MainActor
@@ -206,6 +206,42 @@ struct ThrowDiceIntent: AppIntent {
     }
 }
 
+/* this is useless, since Shortcuts will time out if the result take too long to return.
+@available(iOS 16.0, macOS 13.0, visionOS 1.0, *)
+struct BatchThrowDiceIntent: AppIntent {
+    static var title: LocalizedStringResource = "Batch Throw Dice to CSV"
+    static var description = IntentDescription("Throws the active dice multiple times in one run and returns a CSV table of results.")
+    static var openAppWhenRun: Bool = false
+
+    @available(iOS 26.0, macOS 26.0, visionOS 26.0, *)
+    static var supportedModes: IntentModes { [.background, .foreground(.dynamic)] }
+
+    @Parameter(title: "Rolls", default: 100, inclusiveRange: (1, 5000)) var rolls: Int
+    @Parameter(title: "Method", default: .swipe) var method: ShortcutThrowMethod
+    @Parameter(title: "Swipe Speed (0 = Gentle, 1 = Fast)", default: 0.0, controlStyle: .slider, inclusiveRange: (0.0, 1.0)) var energy: Double
+    @Parameter(title: "Swipe Curl (0 = Straight, 1 = Spin)", default: 0.0, controlStyle: .slider, inclusiveRange: (0.0, 1.0)) var curl: Double
+    @Parameter(title: "Formation", default: .currentSetting) var formation: ShortcutLaunchMode
+    @Parameter(title: "Undo Between Rolls (Same Start)", default: false) var useUndo: Bool
+
+    @MainActor
+    func perform() async throws -> some IntentResult & ReturnsValue<String> {
+        guard let game = await DiceShortcutBridge.shared.readyGame(for: self),
+              game.world_.numToRoll() > 0, game.canThrow_ else { return .result(value: "") }
+
+        var lines: [String] = []
+        lines.reserveCapacity(rolls)
+
+        for i in 0..<rolls {
+            if useUndo && i > 1, game.world_.state == .rolled, game.world_.undoButton.isEnabled {
+                _ = await DiceShortcutBridge.shared.runAndSettle { game.undo() }
+            }
+            let res = await DiceShortcutBridge.shared.throwDice(game: game, method: method, energy: energy, curl: curl, formation: formation)
+            lines.append(res.map(String.init).joined(separator: ","))
+        }
+        return .result(value: lines.joined(separator: "\n"))
+    }
+}
+ */
 @available(iOS 16.0, macOS 13.0, visionOS 1.0, *)
 struct ReplaceDiceIntent: AppIntent {
     static var title: LocalizedStringResource = "Set Dice on Table"
