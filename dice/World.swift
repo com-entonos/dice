@@ -83,8 +83,11 @@ class World: SCNScene, SCNPhysicsContactDelegate {
     private var otherFOV = CGFloat(0)  // the wide FOV is 35 and this is calculated
     private var rect : CGRect!       // rectangle giving the 'safe' area
     
+    #if !os(watchOS)
     var _undoButton = UIButton()  // undo button
     var _redoButton = UIButton()  // redo button
+    #endif
+    var onUndoRedoStateChanged: ((_ canUndo: Bool, _ canRedo: Bool) -> Void)?
     
     var state: WorldState {
         get {return _state}
@@ -129,6 +132,7 @@ class World: SCNScene, SCNPhysicsContactDelegate {
             }
         }
     }
+    #if !os(watchOS)
     var undoButton: UIButton { // so we can turn it on/off
         get { return _undoButton }
         set (value) { _undoButton = value }
@@ -137,6 +141,7 @@ class World: SCNScene, SCNPhysicsContactDelegate {
         get { return _redoButton }
         set (value) { _redoButton = value }
     }
+    #endif
     var dice: [Dice] { // return the array of dice on the table
         get { return _dice }
     }
@@ -471,10 +476,13 @@ class World: SCNScene, SCNPhysicsContactDelegate {
     }
     
     func clearUnReDo() {
+        #if !os(watchOS)
         _undoButton.isEnabled = false
         _undoButton.isHidden = true
         _redoButton.isEnabled = false
         _redoButton.isHidden = true
+        #endif
+        onUndoRedoStateChanged?(false, false)
     }
     
     func deleteUndo() {
@@ -505,10 +513,14 @@ class World: SCNScene, SCNPhysicsContactDelegate {
                     throwResults.remove(at: nUndo+1)
                 }
             }
+            let canUndo = (throwResults.count > 1)
+            #if !os(watchOS)
             redoButton.isEnabled = false
             _redoButton.isHidden = true
-            _undoButton.isEnabled = (throwResults.count > 1)
-            _undoButton.isHidden = !(throwResults.count > 1)
+            _undoButton.isEnabled = canUndo
+            _undoButton.isHidden = !canUndo
+            #endif
+            onUndoRedoStateChanged?(canUndo, false)
             //print("newUndo: \(throwResults.count) \(_dice.count)")
         }
     }
@@ -528,12 +540,17 @@ class World: SCNScene, SCNPhysicsContactDelegate {
             //print("redo: \(whichUndo)")
             whichUndo -= 1
             resetDieNum()
+            let canUndo = (whichUndo + 1 < throwResults.count)
+            let canRedo = (whichUndo > 0)
+            #if !os(watchOS)
             if whichUndo == 0 {
                 _redoButton.isEnabled = false
                 _redoButton.isHidden = true
             }
-            _undoButton.isEnabled = (whichUndo + 1 < throwResults.count)
-            _undoButton.isHidden = !(whichUndo + 1 < throwResults.count)
+            _undoButton.isEnabled = canUndo
+            _undoButton.isHidden = !canUndo
+            #endif
+            onUndoRedoStateChanged?(canUndo, canRedo)
         }
     }
     
@@ -543,10 +560,14 @@ class World: SCNScene, SCNPhysicsContactDelegate {
             if whichUndo+1 < throwResults.count {
                 whichUndo += 1
                 resetDieNum()
-                _undoButton.isEnabled = (whichUndo + 1 < throwResults.count)
-                _undoButton.isHidden = !(whichUndo + 1 < throwResults.count)
+                let canUndo = (whichUndo + 1 < throwResults.count)
+                #if !os(watchOS)
+                _undoButton.isEnabled = canUndo
+                _undoButton.isHidden = !canUndo
                 _redoButton.isEnabled = true
                 _redoButton.isHidden = false
+                #endif
+                onUndoRedoStateChanged?(canUndo, true)
                 //print("end of world.undo \(throwResults.count) \(_dice.count)")
             }
         }
@@ -597,18 +618,29 @@ class World: SCNScene, SCNPhysicsContactDelegate {
                     die.defaultColor()
                 }
                 // eye-candy for moving the dice from current to final position
-                let q0 = die.presentation.simdOrientation
-                let composite = SCNAction.group([SCNAction.move(to: SCNVector3(x: r.x, y: r.y, z: r.z), duration: 0.5 ),
-                                                 SCNAction.customAction(duration: 0.5) { $0.simdOrientation = simd_slerp(q0, q, Float(min(1.0, $1 / 0.5)))} ])
-                die.physicsBody?.collisionBitMask = 0  // don't care about collisions
-                die.runAction(composite, completionHandler: { () in
+                let applyRestore = {
                     die.physicsBody?.type = .dynamic
                     die.physicsBody?.clearAllForces()  // in case it has any physics forces on them
                     die.simdPosition = r                // make sure we're at the position
                     die.simdOrientation = q             // and orientation
                     die.physicsBody?.resetTransform()
                     die.physicsBody?.collisionBitMask = 3  // turn collisions back on
-                    })
+                }
+
+                let q0 = die.presentation.simdOrientation
+                let composite = SCNAction.group([SCNAction.move(to: SCNVector3(x: r.x, y: r.y, z: r.z), duration: 0.5 ),
+                                                 SCNAction.customAction(duration: 0.5) { $0.simdOrientation = simd_slerp(q0, q, Float(min(1.0, $1 / 0.5)))} ])
+                die.physicsBody?.collisionBitMask = 0  // don't care about collisions
+                #if os(watchOS)
+                die.runAction(composite)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    applyRestore()
+                }
+                #else
+                die.runAction(composite, completionHandler: applyRestore)
+                #endif
+
+
             }
         }
         _state = .rolling  // rendering will take care of re0scoring
@@ -687,19 +719,12 @@ class World: SCNScene, SCNPhysicsContactDelegate {
                 
                 // let's move the die from their positions to throwing positions- translation then rotations, ignoring collisions. just eye candy
 
-                let q0 = die.safeOr
-                let composite = SCNAction.group([SCNAction.move(to: SCNVector3(x: r.x, y: r.y, z: r.z), duration: 0.2 ),
-                                                 SCNAction.customAction(duration: 0.2) { $0.simdOrientation = simd_slerp(q0, nO, Float(min(1.0, $1 / 0.2)))} ])
-                die.physicsBody?.collisionBitMask = 0
-    //print("\(icc) \(die.physicsBody!.collisionBitMask) \(die)")
-                die.runAction(composite, completionHandler: { () in
-    //print(die.presentation.simdPosition-r,die.presentation.simdOrientation-nO)
+                let launchGather = {
                     die.physicsBody?.type = .dynamic
-                    die.physicsBody!.clearAllForces() // moving into position may have caused collision forces, ignore them!
+                    die.physicsBody!.clearAllForces()
                     die.simdPosition = r
                     die.simdOrientation = nO
                     die.physicsBody!.resetTransform()
-                    // create random vector of v and omega and add
                     let rndv = SCNVector3(x: vperp*Float.random(in: -0.25...0.25), y: vperp*Float.random(in: -0.25...0.25), z: vperp*Float.random(in: -0.25...0.25)) // upto 1/8 the potential energy is random in each component (max is 3/8)
                     let rndo = Float.random(in: -1...1) //Float.random(in: 0.25...1)*Float(Int.random(in: 0...1)*2-1)
                     die.randomVelocity(SCNVector3(vperp * v.x * Float.random(in: 0.9...1.1) + rndv.x,
@@ -709,7 +734,18 @@ class World: SCNScene, SCNPhysicsContactDelegate {
                     let mass = Float(die.physicsBody!.mass)*2*9.8*self.launchHeight
                     die.randomOmega((frot*Float.random(in: 0.9...1.1)+rndo)*sqrt(mass/inertia!.y)*0.5)
                     die.physicsBody?.collisionBitMask = 3
-                })
+                }
+
+                #if os(watchOS)
+                launchGather()
+                #else
+                let q0 = die.safeOr
+                let composite = SCNAction.group([SCNAction.move(to: SCNVector3(x: r.x, y: r.y, z: r.z), duration: 0.2 ),
+                                                 SCNAction.customAction(duration: 0.2) { $0.simdOrientation = simd_slerp(q0, nO, Float(min(1.0, $1 / 0.2)))} ])
+                die.physicsBody?.collisionBitMask = 0
+                die.runAction(composite, completionHandler: launchGather)
+                #endif
+
             }
         } else {
             var placed = _dice.filter { !dieSelection.contains($0) }.map { ($0.safePos, $0.circumR) }
@@ -732,16 +768,7 @@ class World: SCNScene, SCNPhysicsContactDelegate {
                 let (nO, q0, pos) = (die.randomOrientation(), die.safeOr, die.safePos)
                 let r = targets[ObjectIdentifier(die)]!
 
-                die.simdOrientation = q0
-                die.simdPosition = pos
-                die.physicsBody?.type = .static
-                die.physicsBody?.resetTransform()
-                die.physicsBody?.collisionBitMask = 0
-
-                let move = SCNAction.move(to: SCNVector3(r.x, r.y, r.z), duration: 0.1)
-                let rot = SCNAction.customAction(duration: 0.1) { $0.simdOrientation = simd_slerp(q0, nO, Float(min(1.0, $1 / 0.1))) }
-
-                die.runAction(.group([move, rot])) {
+                let launchScatter = {
                     die.physicsBody?.type = .dynamic
                     die.physicsBody?.clearAllForces()
                     die.simdPosition = r
@@ -756,6 +783,22 @@ class World: SCNScene, SCNPhysicsContactDelegate {
                     die.randomOmega(max(0.25, frot) * Float.random(in: 0.8...1.4) * sqrt(mass / die.physicsBody!.momentOfInertia.y) * 0.5)
                     die.physicsBody?.collisionBitMask = 3
                 }
+
+                #if os(watchOS)
+                launchScatter()
+                #else
+                die.simdOrientation = q0
+                die.simdPosition = pos
+                die.physicsBody?.type = .static
+                die.physicsBody?.resetTransform()
+                die.physicsBody?.collisionBitMask = 0
+
+                let move = SCNAction.move(to: SCNVector3(r.x, r.y, r.z), duration: 0.1)
+                let rot = SCNAction.customAction(duration: 0.1) { $0.simdOrientation = simd_slerp(q0, nO, Float(min(1.0, $1 / 0.1))) }
+
+                die.runAction(.group([move, rot]), completionHandler: launchScatter)
+                #endif
+
             }
             /* old way
             for die in dieSelection.shuffled() {
@@ -853,7 +896,12 @@ class World: SCNScene, SCNPhysicsContactDelegate {
         let ambientLight = SCNLight()
         ambientLight.type = SCNLight.LightType.ambient
         //ambientLight.color = UIColor(red: 0.1, green: 0.1, blue: 0.1, alpha: 0.2)
+        #if os(watchOS)
+        ambientLight.color = UIColor(red: 0.55, green: 0.55, blue: 0.55, alpha: 1.0)
+        #else
         ambientLight.color = UIColor(red: 0.3, green: 0.3, blue: 0.3, alpha: 1.0)
+        #endif
+
         //ambientLight.color = UIColor(red: 0.5, green: 0, blue: 0, alpha: 1.0)
         //ambientLight.intensity = 0
         cameraNode.light = ambientLight
@@ -865,7 +913,11 @@ class World: SCNScene, SCNPhysicsContactDelegate {
         light2.categoryBitMask = 1 //0x1 << 1 // | (0x1 << 3)
         light2.intensity = 1000
         light2.castsShadow = true
+        #if os(watchOS)
+        light2.shadowMapSize = CGSize(width: 512, height: 512)
+        #else
         light2.shadowMapSize = CGSize(width: 2048, height: 2048)
+        #endif
         light2.shadowRadius = 500//10 //5
         let lightNode2 = SCNNode()
         lightNode2.light = light2
@@ -882,7 +934,11 @@ class World: SCNScene, SCNPhysicsContactDelegate {
         floorGeometry.firstMaterial!.diffuse.contents = UIColor.black
         floorGeometry.firstMaterial!.writesToDepthBuffer = true
         floorGeometry.firstMaterial!.readsFromDepthBuffer = true
+        #if os(watchOS)
+        floorGeometry.reflectivity = 0.0
+        #else
         floorGeometry.reflectivity = 0.35
+        #endif
         floorGeometry.reflectionFalloffEnd = CGFloat(dScale)
         floorGeometry.reflectionCategoryBitMask = 1 //0x1 << 2
         let floorNode = SCNNode(geometry: floorGeometry)
@@ -1064,10 +1120,18 @@ final class DiceSoundEngine {
             loadIfNeeded()
         } else {
             reset()
+            #if !os(watchOS)
+            haptic = nil
+            #endif
             audioQueue.async { [weak self] in
-                guard let self, self.isLoaded else { return }
+                guard let self else { return }
                 for p in self.diePlayers where p.isPlaying { p.stop() }
                 for p in self.coinPlayers where p.isPlaying { p.stop() }
+                self.diePlayers.removeAll()
+                self.coinPlayers.removeAll()
+                self.dieIndex = 0
+                self.coinIndex = 0
+                self.isLoaded = false
                 try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
             }
         }

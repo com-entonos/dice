@@ -6,22 +6,28 @@
 //  Copyright © 2019 G.J. Parker. All rights reserved.
 //
 
-import UIKit
 import SceneKit
+#if os(watchOS)
+import WatchKit
+#else
+import UIKit
+#endif
 
 enum DieType : Int,CaseIterable {
     case dice6 = 6, dice2 = 2, dice4 = 4, dice8 = 8, dice10 = 10, dice12 = 12, dice20 = 20
 }
 
+#if !os(watchOS)
 // global variables for icons (is there a better way?)
 let smallIcon : [ DieType: UIImage] = [ .dice6:UIImage(named: "diceSMALL")!, .dice2:UIImage(named: "coinSMALL")!, .dice4:UIImage(named: "tetSMALL")!, .dice8:UIImage(named: "octSMALL")!,
                                         .dice10:UIImage(named: "decSMALL")!, .dice12:UIImage(named: "dodSMALL")!, .dice20:UIImage(named: "icoSMALL")!]
+#endif
 let tinyIcon : [ DieType: String] = [ .dice6 : "cubeTinyIcon", .dice2 : "coinTinyIcon", .dice4 : "tetraTinyIcon", .dice8 : "octTinyIcon", .dice10 : "decTinyIcon", .dice12 : "dodTinyIcon", .dice20 : "icoTinyIcon" ]
 
 class Dice : SCNNode {
     // base class for die
     
-    var geom = [ DieType.dice6 : SCNScene(named: "art.scnassets/cube.scn")!.rootNode.childNodes[0].geometry ] // root geometry
+    static var geom: [DieType: SCNGeometry?] = [ .dice6 : SCNScene(named: "art.scnassets/cube.scn")!.rootNode.childNodes[0].geometry ] // root geometry
     var dieLength : CGFloat   = 0   // side lenghth of die (m)
     var dieMass : CGFloat = 0       // mass of die (kg)
     private var _dieType : DieType = .dice2 // type of die
@@ -118,6 +124,12 @@ class Dice : SCNNode {
         self.runAction(allActions)
     }
     
+    func cloneMaterials() {
+        if let mats = self.geometry?.materials {
+            self.geometry?.materials = mats.map { $0.copy() as! SCNMaterial }
+        }
+    }
+    
     func randomOrientation() -> simd_quatf {  // make an random orientation of the die
 /**/
         // create a random quaternion
@@ -197,8 +209,8 @@ class Dice : SCNNode {
         
         // stuff all die share...
         self.categoryBitMask = 1
-        self.physicsBody = SCNPhysicsBody(type: .dynamic, shape: nil) //SCNBox(width: size, height: size, length: size, chamferRadius: size*0.1))
-        self.physicsBody!.restitution = dieRestitution //1.0
+        self.physicsBody = SCNPhysicsBody(type: .dynamic, shape: nil)
+        self.physicsBody!.restitution = dieRestitution
         self.physicsBody!.friction = dieFriction
         self.physicsBody!.categoryBitMask = 1
         self.physicsBody!.contactTestBitMask = 3
@@ -213,6 +225,7 @@ class Dice : SCNNode {
     func holdColor(pulse: Bool) {   // held dice appearance
         self.geometry?.materials[0].reflective.contents = #colorLiteral(red: 0, green: 0, blue: 0, alpha: 1)  // dull, so the color shows up
         self.geometry?.materials[0].specular.contents = #colorLiteral(red: 0.5019607843, green: 0.5019607843, blue: 0.5019607843, alpha: 1)
+        #if !os(watchOS)
         if pulse { // ooh, do some eye candy
             if let diffuse = UIImage(named: "MyAssets/" + self.diffuseName + "DiceB") {self.geometry?.materials[0].diffuse.contents = diffuse}
             let ani1 = CABasicAnimation(keyPath: "geometry.materials[0].multiply.contents")
@@ -230,10 +243,18 @@ class Dice : SCNNode {
                 self.geometry?.materials[0].multiply.contents = #colorLiteral(red: 0.2745098039, green: 0.2745098039, blue: 0.2745098039, alpha: 1)
             }
         }
+        #else
+        if let diffuse = UIImage(named: "MyAssets/" + self.diffuseName + "DiceB") {
+            self.geometry?.materials[0].diffuse.contents = diffuse
+        } else {
+            self.geometry?.materials[0].multiply.contents = #colorLiteral(red: 0.2745098039, green: 0.2745098039, blue: 0.2745098039, alpha: 1)
+        }
+        #endif
     }
     func selectColor(pulse: Bool) { // selected dice appearance
         self.geometry?.materials[0].reflective.contents = #colorLiteral(red: 0, green: 0, blue: 0, alpha: 1)  // dull, so the color shows up
         self.geometry?.materials[0].specular.contents = #colorLiteral(red: 0.5019607843, green: 0.5019607843, blue: 0.5019607843, alpha: 1)
+        #if !os(watchOS)
         if pulse { // ooh, do some eye candy
             if let diffuse = UIImage(named: "MyAssets/" + self.diffuseName + "DiceA") {self.geometry?.materials[0].diffuse.contents = diffuse}
             let ani1 = CABasicAnimation(keyPath: "geometry.materials[0].multiply.contents")
@@ -250,9 +271,20 @@ class Dice : SCNNode {
                 self.geometry?.materials[0].multiply.contents = #colorLiteral(red: 0.7271999717, green: 0, blue: 0, alpha: 1)
             }
         }
+        #else
+        if let diffuse = UIImage(named: "MyAssets/" + self.diffuseName + "DiceA") {
+            self.geometry?.materials[0].diffuse.contents = diffuse
+        } else {
+            self.geometry?.materials[0].multiply.contents = #colorLiteral(red: 0.7271999717, green: 0, blue: 0, alpha: 1)
+        }
+        #endif
     }
     func defaultColor(){  // default dice appearance
+        #if !os(watchOS)
         self.removeAllAnimations()
+        #else
+        self.removeAllActions()
+        #endif
         self.geometry?.materials[0].diffuse.contents = UIImage(named: "MyAssets/" + self.diffuseName + "Dice")
         self.geometry?.materials[0].reflective.contents = #colorLiteral(red: 0, green: 0, blue: 0, alpha: 1)  // for more pretty
         self.geometry?.materials[0].specular.contents = #colorLiteral(red: 0.5, green: 0.5, blue: 0.5, alpha: 1)
@@ -268,8 +300,6 @@ class Dice : SCNNode {
         } else {
             return 1
         }
-        //let x = simd_dot(up,self.presentation.simdOrientation.act(SIMD3<Float>(0,1,0)))
-        //return x != 0.0 ? (x+abs(x))/(2.0*x) : 0
     }
 
 }
@@ -280,7 +310,7 @@ class Dice : SCNNode {
 class Coin : Dice {  // coin, 2 sided die
     override func defaultColor(){  // default dice appearance
         super.defaultColor()
-        self.geometry?.materials[0].specular.contents = #colorLiteral(red: 0, green: 0, blue: 0, alpha: 1) //#colorLiteral(red: 1, green: 1, blue: 1, alpha: 1)
+        self.geometry?.materials[0].specular.contents = #colorLiteral(red: 0, green: 0, blue: 0, alpha: 1)
     }
     override func randomOmega(_ wOffset: Float) {
         
@@ -288,11 +318,6 @@ class Coin : Dice {  // coin, 2 sided die
         
         // torque is applied in world coordinates, so transform from local to world
         let n = self.simdOrientation.inverse.act(SIMD3<Float>(cos(phi), 0, sin(phi)))
-/*
-        let m = dieInertia  // +- moment of inertia, impluse = delta Iw = I delta w
-        let torque = SCNVector4(x: n.x * m.x, y: n.y * m.y, z: n.z * m.z, w: ( wOffset * (1 + Float.random(in: -0.3...0.3))))
-        self.physicsBody!.applyTorque(torque, asImpulse: true)
- */
         self.physicsBody!.angularVelocity = SCNVector4(n.x, n.y, n.z, 2 * wOffset * (1 + Float.random(in: -0.3...0.3)) * Float(Int.random(in: 0...1)*2-1))
     }
     
@@ -300,11 +325,9 @@ class Coin : Dice {  // coin, 2 sided die
         
         super.init()
         
-        //let size0 = size*sqrt(3.0)/2.0 //* 1.4
         let size0 = CGFloat(0.182/2.0)
         self.dieLength = 2 * size0
-        //self.dieMass = CGFloat.pi * 0.15 * dieDensity * size0 * size0 * size0 //* 1000000
-        self.dieMass = dieDensity * size * size * size //* 1000000
+        self.dieMass = dieDensity * size * size * size
         self.dieInertia = simd_float3(1, 2, 1) * Float(size0 * size0 / 4 * self.dieMass)
 
         self.name = "die2"
@@ -312,28 +335,23 @@ class Coin : Dice {  // coin, 2 sided die
         self.dieType = .dice2
         self.dieInR = size * 0.22 / 2
         self.dieCircumR = size0
-        self.dieMidR = size0 / 2 //size * 0.15 * 2 //size0 / 4
+        self.dieMidR = size0 / 2
         
-        if geom[self.dieType] == nil { geom[self.dieType] = SCNScene(named: "art.scnassets/coin.scn")!.rootNode.childNodes[0].geometry }
-        self.geometry = geom[self.dieType]!!.copy() as? SCNGeometry
+        if Dice.geom[self.dieType] == nil { Dice.geom[self.dieType] = SCNScene(named: "art.scnassets/coin.scn")!.rootNode.childNodes[0].geometry }
+        self.geometry = Dice.geom[self.dieType]!!.copy() as? SCNGeometry
+        self.cloneMaterials()
         var physCoin: SCNNode {
             
             let parent = SCNNode()
-            //parent.addChildNode(SCNNode(geometry: SCNCylinder(radius: 1.05 * size0, height: size*0.05)))
-            //parent.addChildNode(SCNNode(geometry: SCNTube(innerRadius: 0.5 * size0, outerRadius: 0.6 * size0, height: size*0.3)))
             parent.addChildNode(SCNNode(geometry: SCNCylinder(radius: size0, height: size*0.22)))
-            //parent.addChildNode(SCNNode(geometry: SCNCylinder(radius: size0, height: size*0.25)))
             parent.addChildNode(SCNNode(geometry: SCNCylinder(radius: size0*1.02, height: size*0.02)))
 
             return parent
         }
         self.physicsBody!.physicsShape = SCNPhysicsShape(node: physCoin, options: [SCNPhysicsShape.Option.keepAsCompound:true])
-        //self.physicsBody!.physicsShape = SCNPhysicsShape(geometry: SCNCylinder(radius: size0, height: size*0.15), options: nil)
         let inertia = self.dieInertia
         self.physicsBody!.momentOfInertia = SCNVector3(inertia.x, inertia.y , inertia.z)
-        //self.physicsBody!.rollingFriction = 0.5
-        //self.physicsBody?.friction = 0.7
-        self.physicsBody!.angularDamping = 0.5 //0.3 //0.7
+        self.physicsBody!.angularDamping = 0.5
         self.physicsBody!.mass = self.dieMass
     }
     required init(coder: NSCoder) {
@@ -346,7 +364,6 @@ class Tet: Dice {  // tetrahedron, 4 sided dice
     override func value(up: simd_float3) -> Int {            // return value of face showing in the 'up' direction
         let norms: Array<SIMD3<Float>> = [SIMD3<Float>(0.46945852, 0.3441959, -0.8131041), SIMD3<Float>(0.46944964, 0.34419796, 0.813108), SIMD3<Float>(0, -1, 0), SIMD3<Float>(-0.9388987, 0.34419358, 0)]
         let q = self.presentation.simdOrientation   // a quaternion from reference to final orientation
-        //        print(q.inverse.act(float3(0,-1,0)))
         var ic = 4
         var c = Float(0.0)
         for (i,n) in norms.enumerated() {                            // loop over three unit vectors
@@ -362,7 +379,7 @@ class Tet: Dice {  // tetrahedron, 4 sided dice
         
         let size0 = size * 1.3
         self.dieLength = size0
-        self.dieMass = dieDensity * size0 * size0 * size0 / sqrt(72) //* 1000000
+        self.dieMass = dieDensity * size0 * size0 * size0 / sqrt(72)
         self.dieInertia = simd_float3(1, 1, 1) * Float(self.dieMass * size0 * size0 / 20)
         
         
@@ -371,9 +388,10 @@ class Tet: Dice {  // tetrahedron, 4 sided dice
         self.dieType = .dice4
         let inertia = self.dieInertia
         
-        if geom[self.dieType] == nil { geom[self.dieType] = SCNScene(named: "art.scnassets/tet.scn")!.rootNode.childNodes[0].geometry }
-        self.geometry = geom[self.dieType]!?.copy() as? SCNGeometry
-        self.dieInR = 0.06740 //0.067401 // analytic: a/sqrt(24) = 0.2041241452 a
+        if Dice.geom[self.dieType] == nil { Dice.geom[self.dieType] = SCNScene(named: "art.scnassets/tet.scn")!.rootNode.childNodes[0].geometry }
+        self.geometry = Dice.geom[self.dieType]!?.copy() as? SCNGeometry
+        self.cloneMaterials()
+        self.dieInR = 0.06740
         self.dieCircumR = size0 * sqrt(3/8) * 1.15
         self.dieMidR = size0 / sqrt(8)
         
@@ -411,15 +429,15 @@ class Tet: Dice {  // tetrahedron, 4 sided dice
                                           r: simd_mul(simd_quatf(angle:-Float.pi/2+acos(1/3), axis: SIMD3<Float>(sqrt(3/4), 0,-0.5)), simd_quatf(angle: Float.pi/3, axis: SIMD3<Float>(0,-1, 0)))))
             
             /* corners (as spheres) */
-            let d = size0*0.05 //0.05
-            let r = size0//-d
+            let d = size0*0.05
+            let r = size0
             parent.addChildNode(trans(geometry: SCNSphere(radius: d), x:  0,          y:  r*sqrt(3/8), z:  0))
             parent.addChildNode(trans(geometry: SCNSphere(radius: d), x:  r/sqrt(3),  y: -r/sqrt(24),  z:  0))
             parent.addChildNode(trans(geometry: SCNSphere(radius: d), x: -r/sqrt(12), y: -r/sqrt(24),  z:  r/2))
             parent.addChildNode(trans(geometry: SCNSphere(radius: d), x: -r/sqrt(12), y: -r/sqrt(24),  z: -r/2))
             return parent
         }
-        self.physicsBody!.physicsShape = SCNPhysicsShape(node: physNode, options: [SCNPhysicsShape.Option.keepAsCompound:true]) //, SCNPhysicsShape.Option.collisionMargin:-1])
+        self.physicsBody!.physicsShape = SCNPhysicsShape(node: physNode, options: [SCNPhysicsShape.Option.keepAsCompound:true])
         self.physicsBody!.momentOfInertia = SCNVector3(inertia.x, inertia.y , inertia.z)
         self.physicsBody!.mass = self.dieMass
     }
@@ -437,20 +455,17 @@ class Oct: Dice {  //octahedron, 8 sided die
         var c = Float(0.0)
         for (i,n) in norms.enumerated() {            // loop over normal vectors
             let a = simd_dot(up, q.act(n))          // rotate with q and project onto 'up' (both are normalized so magnitude = cos of angle between them)
-            //if a > 0.81 { return i+1}         // is face up?
-            //if a < -0.81 { return 8 - i}    // is face down?
             if abs(a) > abs(c) {c=a; ic=i}
         }
-        return (c>0) ? ic+1 : 8-ic // 8 //should never get here
+        return (c>0) ? ic+1 : 8-ic
     }
     
     init(size: CGFloat) {
         super.init()
         
         self.dieLength = size * sqrt(2)
-        let size0 = size //* 1.1 //2.2
-        self.dieMass = dieDensity * size0 * size0 * size0 * sqrt(2)/3 //* 1000000
-        //self.dieMass = dieDensity * size * size * size //* 1000000
+        let size0 = size
+        self.dieMass = dieDensity * size0 * size0 * size0 * sqrt(2)/3
         self.dieInertia = simd_float3(1, 1, 1) * Float(self.dieMass * size0 * size0 / 10)
         
         
@@ -458,10 +473,11 @@ class Oct: Dice {  //octahedron, 8 sided die
         self.name = "die8"
         self.diffuseName = "oct"
         self.dieType = .dice8
-        if geom[self.dieType] == nil { geom[self.dieType] = SCNScene(named: "art.scnassets/oct.scn")!.rootNode.childNodes[0].geometry }
-        self.geometry = geom[self.dieType]!?.copy() as? SCNGeometry
+        if Dice.geom[self.dieType] == nil { Dice.geom[self.dieType] = SCNScene(named: "art.scnassets/oct.scn")!.rootNode.childNodes[0].geometry }
+        self.geometry = Dice.geom[self.dieType]!?.copy() as? SCNGeometry
+        self.cloneMaterials()
         self.simdScale = simd_float3(1,1,1) * sqrt(2) * 0.1 / 1.85
-        self.dieInR = 0.080825 // analytic: a / sqrt(2) =  0.7071067812 a = 0.7071067812 size0
+        self.dieInR = 0.080825
         self.dieCircumR = size0 / sqrt(2) * 1.20
         self.dieMidR = size0 / 2
         
@@ -472,11 +488,6 @@ class Oct: Dice {  //octahedron, 8 sided die
             pyrNode1.simdOrientation = simd_quatf(angle: Float.pi/4, axis: SIMD3<Float>(0, 1, 0))
             let pyrNode2 = SCNNode(geometry: SCNPyramid(width: size0, height: size0/sqrt(2), length: size0))
             pyrNode2.simdOrientation = simd_mul(simd_quatf(angle: Float.pi, axis: SIMD3<Float>(1, 0, 0)) ,simd_quatf(angle: Float.pi/4, axis: SIMD3<Float>(0, 1, 0)))
-            //let pyrNode2 = SCNNode(geometry: SCNPyramid(width: size0, height: -size0/sqrt(2), length: size0))
-            //pyrNode2.simdOrientation = simd_quatf(angle: Float.pi/4, axis: SIMD3<Float>(0, 1, 0))
-            //let pyrNode2 = SCNNode(geometry: SCNPyramid(width: size0, height: size0/sqrt(2), length: size0))
-            //pyrNode2.simdOrientation = simd_quatf(angle: Float.pi/4, axis: SIMD3<Float>(0, 1, 0))
-            //pyrNode2.simdScale = simd_float3(1, -1, 1)
             
             parent.addChildNode(pyrNode1)
             parent.addChildNode(pyrNode2)
@@ -503,10 +514,9 @@ class Dec: Dice {  // 10 sided die
         var c = Float(0.0)
         for (i,n) in norms.enumerated() {                            // loop over three unit vectors
             let a = simd_dot(up, q.act(n))          // rotate with q and project onto 'up' (both are normalized so magnitude = cos of angle between them)
-            //if a > 0.8 { return i+1}                // is face up?
             if a > c {c=a; ic=i+1}
         }
-        return ic //should never get here
+        return ic
     }
     
     init(size: CGFloat) {
@@ -514,8 +524,7 @@ class Dec: Dice {  // 10 sided die
         
         self.dieLength = size * 1.2
         let size0 = size
-        self.dieMass = dieDensity * size0 * size0 * size0 //* 1000000
-        //self.dieMass = dieDensity * size * size * size //* 1000000
+        self.dieMass = dieDensity * size0 * size0 * size0
         self.dieInertia = simd_float3(1, 1, 1) * Float(self.dieMass * size0 * size0 * 2 / 5)
         
         
@@ -523,20 +532,18 @@ class Dec: Dice {  // 10 sided die
         self.name = "die10"
         self.diffuseName = "dec"
         self.dieType = .dice10
-        if geom[self.dieType] == nil { geom[self.dieType] = SCNScene(named: "art.scnassets/dec.scn")!.rootNode.childNodes[0].geometry }
-        self.geometry = geom[self.dieType]!?.copy() as? SCNGeometry
+        if Dice.geom[self.dieType] == nil { Dice.geom[self.dieType] = SCNScene(named: "art.scnassets/dec.scn")!.rootNode.childNodes[0].geometry }
+        self.geometry = Dice.geom[self.dieType]!?.copy() as? SCNGeometry
+        self.cloneMaterials()
         self.simdScale = simd_float3(1,1,1) * 1.26 * 0.1 / 1.124
         self.dieInR = 0.0462955
         self.dieCircumR = size0 * 0.65
-        self.dieMidR = self.dieInR //size0 * 0.66
+        self.dieMidR = self.dieInR
         
         var physDeci: SCNNode {
-            
-            
-            let r = size0 * 0.05 //0.3             // radius of corners, want big to avoid visual penetrationlet rho = size0 * 2 / (sqrt(5)-1) - r  // radius ico minus the corner radius
+            let r = size0 * 0.05
             let radius = size0 * 1.2 * 0.7 * 0.8 - r
             let height = size0 * 0.65 - r
-            
             
             func trans(geometry: SCNGeometry, x: CGFloat, y: CGFloat, z: CGFloat) -> SCNNode { // move this new nodew/ this geometry
                 let node = SCNNode(geometry: geometry)
@@ -572,16 +579,13 @@ class Dod: Dice {  // dodecahedron, 12 sided die
         let norms: Array<SIMD3<Float>> = [SIMD3<Float>( 0.85065114, 0,-0.5257305),  SIMD3<Float>( 0.5257283, -0.85065234, 0),  SIMD3<Float>( 0,-0.5257289,-0.850652),
                                     SIMD3<Float>( 0.8506506, 0, 0.5257312),  SIMD3<Float>( 0, 0.5257311, -0.8506508),  SIMD3<Float>( 0.5257301, 0.85065144, 0)]
         let q = self.presentation.simdOrientation   // a quaternion from reference to final orientation
-        //print(q.inverse.act(float3(0, 1, 0)))
         var ic = 12
         var c = Float(0.0)
         for (i,n) in norms.enumerated() {                            // loop over three unit vectors
             let a = simd_dot(up, q.act(n))          // rotate with q and project onto 'up' (both are normalized so magnitude = cos of angle between them)
-            //if a > 0.8 { return i+1}         // is face up?
-            //if a < -0.8 { return 12 - i}    // is face down?
             if abs(a) > abs(c) {c=a; ic=i}
         }
-        return (c>0) ? ic+1 : 12-ic //12 //should never get here
+        return (c>0) ? ic+1 : 12-ic
     }
     
     init(size: CGFloat) {
@@ -589,8 +593,7 @@ class Dod: Dice {  // dodecahedron, 12 sided die
         
         self.dieLength = size * 1.4
         let size0 = size * 0.5569 * 0.95
-        self.dieMass = dieDensity * size0 * size0 * size0 * CGFloat((15.0+7.0*sqrt(5.0)) / 4) //* 1000000
-        //self.dieMass = dieDensity * size * size * size //* 1000000
+        self.dieMass = dieDensity * size0 * size0 * size0 * CGFloat((15.0+7.0*sqrt(5.0)) / 4)
         self.dieInertia = simd_float3(1, 1, 1) * Float(self.dieMass * size0 * size0 * 3 / 5)
         
         
@@ -598,17 +601,18 @@ class Dod: Dice {  // dodecahedron, 12 sided die
         self.name = "die12"
         self.diffuseName = "dod"
         self.dieType = .dice12
-        if geom[self.dieType] == nil { geom[self.dieType] = SCNScene(named: "art.scnassets/dod.scn")!.rootNode.childNodes[0].geometry }
-        self.geometry = geom[self.dieType]!?.copy() as? SCNGeometry
+        if Dice.geom[self.dieType] == nil { Dice.geom[self.dieType] = SCNScene(named: "art.scnassets/dod.scn")!.rootNode.childNodes[0].geometry }
+        self.geometry = Dice.geom[self.dieType]!?.copy() as? SCNGeometry
+        self.cloneMaterials()
         self.simdScale = simd_float3(1,1,1) * 0.1 * 1.4 / 1.81
-        self.dieInR = 0.0599975  // analytic: a sqrt(5/2 + 11 sqrt(5) / 10) / 2 = a gr^2/2/sqrt(3-gr) = 1.1135163644 a = 0.5891114002 scale -> (0.5891114002 - balls) scale =
+        self.dieInR = 0.0599975
         self.dieCircumR = size0 * CGFloat(sqrt(3.0) * (1.0+sqrt(5.0)) / 4.0)
-        self.dieMidR = self.dieInR //size0 * (3+sqrt(5)) / 4
+        self.dieMidR = self.dieInR
         
         var physDod: SCNNode {
             
             let gr = CGFloat((1+sqrt(5))/2) // golden ratio
-            let r = size0 * 0.1 //0.15 //0.3             // radius of corners, want big to avoid visual penetration
+            let r = size0 * 0.1
             let radius = size0*sqrt(3)*gr/2 - r  // radius ico minus the corner radius
             
             func trans(geometry: SCNGeometry, x: CGFloat, y: CGFloat, z: CGFloat) -> SCNNode { // move this new nodew/ this geometry
@@ -625,7 +629,7 @@ class Dod: Dice {  // dodecahedron, 12 sided die
             for ix in stride(from: -1, to: 2, by: 2) {
                 for iy in stride(from: -1, to: 2, by: 2) {
                     for iz in stride(from: -1, to: 2, by: 2) {
-                        parent.addChildNode(trans(geometry: SCNSphere(radius: r), x: CGFloat(ix) * box, y: CGFloat(iy) * box, z: CGFloat(iz) * box)) // inscribed sphere
+                        parent.addChildNode(trans(geometry: SCNSphere(radius: r), x: CGFloat(ix) * box, y: CGFloat(iy) * box, z: CGFloat(iz) * box))
                     }
                     parent.addChildNode(trans(geometry: SCNSphere(radius: r), x: CGFloat(ix) * box * gr, y: CGFloat(iy) * box / gr, z: 0))
                     parent.addChildNode(trans(geometry: SCNSphere(radius: r), x: CGFloat(ix) * box / gr, y: 0, z: CGFloat(iy) * box * gr))
@@ -655,37 +659,35 @@ class Ico: Dice {  // icosahedron, 20 sided die
         var c = Float(0.0)
         for (i,n) in norms.enumerated() {                            // loop over three unit vectors
             let a = simd_dot(up, q.act(n))          // rotate with q and project onto 'up' (both are normalized so magnitude = cos of angle between them)
-            //if a > 0.8 { return i+1}         // is face up?
-            //if a < -0.8 { return 20 - i}    // is face down?
             if abs(a) > abs(c) {c=a; ic=i}
         }
-        return (c>0) ? ic+1 : 20-ic //20 //should never get here
+        return (c>0) ? ic+1 : 20-ic
     }
 
     init(size: CGFloat) {
         super.init()
         
         self.dieLength = size * 1.9
-        let size0 = size * 1.6 / 1.923                            
-        self.dieMass = dieDensity * size0 * size0 * size0 * CGFloat((3+sqrt(5)) * 5 / 12) //* 1000000
-        //self.dieMass = dieDensity * size * size * size //* 1000000
+        let size0 = size * 1.6 / 1.923
+        self.dieMass = dieDensity * size0 * size0 * size0 * CGFloat((3+sqrt(5)) * 5 / 12)
         self.dieInertia = simd_float3(1, 1, 1) * Float(self.dieMass * size0 * size0 * 2 / 5)
         
         let inertia = self.dieInertia
         self.name = "die20"
         self.diffuseName = "ico"
         self.dieType = .dice20
-        if geom[self.dieType] == nil { geom[self.dieType] = SCNScene(named: "art.scnassets/ico.scn")!.rootNode.childNodes[0].geometry }
-        self.geometry = geom[self.dieType]!?.copy() as? SCNGeometry
+        if Dice.geom[self.dieType] == nil { Dice.geom[self.dieType] = SCNScene(named: "art.scnassets/ico.scn")!.rootNode.childNodes[0].geometry }
+        self.geometry = Dice.geom[self.dieType]!?.copy() as? SCNGeometry
+        self.cloneMaterials()
         self.simdScale = simd_float3(1,1,1) * 0.1 * 1.6 / 1.923
-        self.dieInR = 0.0654445  // analytic: a sqrt(3) * (3+sqrt(5)) / 12 = a gr^2/2/sqrt(3) = 0.7557613141 a = 0.6288185661 a
+        self.dieInR = 0.0654445
         self.dieCircumR = size0 * sqrt(10 + 2*sqrt(5)) / 4
-        self.dieMidR = self.dieInR //size0 * (1+sqrt(5)) / 4
+        self.dieMidR = self.dieInR
 
         var physIco: SCNNode {
             
             let gr = CGFloat((1+sqrt(5))/2) // golden ratio
-            let r = size0 * 0.15 //0.3             // radius of corners, want big to avoid visual penetration
+            let r = size0 * 0.15
             let radius = size0*sqrt(gr*sqrt(5))/2 - r  // radius ico minus the corner radius
             
             func trans(geometry: SCNGeometry, x: CGFloat, y: CGFloat, z: CGFloat) -> SCNNode { // move this new nodew/ this geometry
@@ -726,14 +728,16 @@ class Cube : Dice { // cube, 6 sided die
             var n = simd_float3(0, 0, 0)
             n[(i+1) % 3] = 1                        // unit vector to rotate (first +z-axis, then +x-axis and then +y-axis, corresponding to 1, 2 and 3 faces
             let a = simd_dot(up, q.act(n))          // rotate with q and project onto 'up' (both are normalized so magnitude = cos of angle between them)
-            //if a > 0.7071 { return i}         // is face up?
-            //if a < -0.7071 { return 7 - i}    // is face down?
             if abs(a) > abs(c) {c=a; ic=i}
         }
-        return (c>0) ? ic : 7-ic //6    //should never get here
+        return (c>0) ? ic : 7-ic
     }
     override func defaultColor(){  // default dice appearance
+        #if !os(watchOS)
         self.removeAllAnimations()
+        #else
+        self.removeAllActions()
+        #endif
         self.geometry?.material(named: "diceBody")?.diffuse.contents = #colorLiteral(red: 0.7952535152, green: 0.7952535152, blue: 0.7952535152, alpha: 1)
         self.geometry?.material(named: "diceDots")?.diffuse.contents = #colorLiteral(red: 0.7271999717, green: 0, blue: 0, alpha: 1)
         self.geometry?.materials[0].reflective.contents = #colorLiteral(red: 0.5176470588, green: 0.568627451, blue: 0.6470588235, alpha: 1)  // for more pretty
@@ -742,6 +746,7 @@ class Cube : Dice { // cube, 6 sided die
     override func holdColor(pulse: Bool) {   // held dice appearance
         self.geometry?.materials[0].reflective.contents = #colorLiteral(red: 0, green: 0, blue: 0, alpha: 1)  // dull, so the color shows up
         self.geometry?.materials[0].specular.contents = #colorLiteral(red: 0.5019607843, green: 0.5019607843, blue: 0.5019607843, alpha: 1)
+        #if !os(watchOS)
         if pulse { // ooh, do some eye candy
             let ani1 = CABasicAnimation(keyPath: "geometry.materials[0].diffuse.contents")
             ani1.fromValue = #colorLiteral(red: 0.7952535152, green: 0.7952535152, blue: 0.7952535152, alpha: 1)
@@ -750,15 +755,20 @@ class Cube : Dice { // cube, 6 sided die
             ani1.autoreverses = true
             ani1.repeatCount = .infinity
             self.addAnimation(ani1, forKey: "HOLDING")
-            self.geometry?.material(named: "diceDots")?.diffuse.contents = #colorLiteral(red: 0.7271999717, green: 0, blue: 0, alpha: 1)//= #colorLiteral(red: 0.7952535152, green: 0.7952535152, blue: 0.7952535152, alpha: 1)//
+            self.geometry?.material(named: "diceDots")?.diffuse.contents = #colorLiteral(red: 0.7271999717, green: 0, blue: 0, alpha: 1)
         } else {  // not so much eye candy
             self.geometry?.materials[0].diffuse.contents = #colorLiteral(red: 0.2745098039, green: 0.2745098039, blue: 0.2745098039, alpha: 1)
             self.geometry?.materials[1].diffuse.contents = #colorLiteral(red: 0.7271999717, green: 0, blue: 0, alpha: 1)
         }
+        #else
+        self.geometry?.materials[0].diffuse.contents = #colorLiteral(red: 0.2745098039, green: 0.2745098039, blue: 0.2745098039, alpha: 1)
+        self.geometry?.materials[1].diffuse.contents = #colorLiteral(red: 0.7271999717, green: 0, blue: 0, alpha: 1)
+        #endif
     }
     override func selectColor(pulse: Bool) {
         self.geometry?.materials[0].reflective.contents = #colorLiteral(red: 0, green: 0, blue: 0, alpha: 1)  // dull, so the color shows up
         self.geometry?.materials[0].specular.contents = #colorLiteral(red: 0.5019607843, green: 0.5019607843, blue: 0.5019607843, alpha: 1)
+        #if !os(watchOS)
         if pulse {  // pretty
             let ani1 = CABasicAnimation(keyPath: "geometry.materials[0].diffuse.contents")
             ani1.fromValue = #colorLiteral(red: 0.7952535152, green: 0.7952535152, blue: 0.7952535152, alpha: 1)
@@ -778,6 +788,10 @@ class Cube : Dice { // cube, 6 sided die
             self.geometry?.materials[0].diffuse.contents = #colorLiteral(red: 0.7271999717, green: 0, blue: 0, alpha: 1)
             self.geometry?.materials[1].diffuse.contents = #colorLiteral(red: 0.7952535152, green: 0.7952535152, blue: 0.7952535152, alpha: 1)
         }
+        #else
+        self.geometry?.materials[0].diffuse.contents = #colorLiteral(red: 0.7271999717, green: 0, blue: 0, alpha: 1)
+        self.geometry?.materials[1].diffuse.contents = #colorLiteral(red: 0.7952535152, green: 0.7952535152, blue: 0.7952535152, alpha: 1)
+        #endif
     }
     
     init(size: CGFloat) {
@@ -785,7 +799,7 @@ class Cube : Dice { // cube, 6 sided die
         super.init()
         
         self.dieLength = size*sqrt(3)
-        self.dieMass = dieDensity * size * size * size //* 1000000
+        self.dieMass = dieDensity * size * size * size
         self.dieInertia = simd_float3(1, 1, 1) * Float(self.dieMass * size * size / 6)
         self.dieInR = size / 2
         self.dieCircumR = size * sqrt(3) / 2
@@ -795,7 +809,8 @@ class Cube : Dice { // cube, 6 sided die
         self.diffuseName = "cube"
         self.dieType = .dice6
         let inertia = self.dieInertia
-        self.geometry = geom[self.dieType]!?.copy() as? SCNGeometry
+        self.geometry = Dice.geom[self.dieType]!?.copy() as? SCNGeometry
+        self.cloneMaterials()
         self.physicsBody!.physicsShape = SCNPhysicsShape(geometry: SCNBox(width: size, height: size, length: size, chamferRadius: size*0.1), options: nil)
         self.physicsBody!.momentOfInertia = SCNVector3(inertia.x, inertia.y, inertia.z)
         self.physicsBody!.mass = self.dieMass
