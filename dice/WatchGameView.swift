@@ -75,6 +75,7 @@ final class WatchDiceController: ObservableObject {
 
         self.world = newWorld
         self.delegate = WatchSceneDelegate(world: newWorld)
+        DiceShortcutBridge.shared.register(watchController: self)
 
         newWorld.onUndoRedoStateChanged = { [weak self] undo, redo in
             Task { @MainActor [weak self] in
