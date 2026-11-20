@@ -6,9 +6,13 @@
 //  Copyright © 2019 G.J. Parker. All rights reserved.
 //
 
-import UIKit
-import SceneKit
 import AVFoundation
+import SceneKit
+#if os(watchOS)
+import WatchKit
+#else
+import UIKit
+#endif
 
 enum WorldState {
     case rolling, rolled, moving
@@ -1021,88 +1025,180 @@ class World: SCNScene, SCNPhysicsContactDelegate {
 
 }
 
-class DiceSoundEngine {
-    private var diePlayers = [AVAudioPlayer]()
-    private var coinPlayers = [AVAudioPlayer]()
+final class DiceSoundEngine {
+    private var diePlayers: [AVAudioPlayer] = []
+    private var coinPlayers: [AVAudioPlayer] = []
+    private var dieIndex = 0
+    private var coinIndex = 0
+    private var isLoaded = false
+    private var isLoading = false
+
+    // Thread-safe state accessed from SceneKit's 120Hz physics thread
+    private let stateLock = NSLock()
     private var lastHitTime = [ObjectIdentifier: TimeInterval]()
     private var lastGlobalTime: TimeInterval = 0
     private var lastHapticTime: TimeInterval = 0
-    private let haptic = UIImpactFeedbackGenerator(style: .light)
-    private let queue = DispatchQueue(label: "com.dice.sound", qos: .userInitiated)
-    private var isEnabled = true
+    private var isEnabled = false
 
-    init() {
-        haptic.prepare()
-        setEnabled(true)
-        queue.async { [weak self] in
-            let dice = Self.makePool(name: "diceSound04", count: 8)
-            let coins = Self.makePool(name: "coinSound", count: 6)
-            DispatchQueue.main.async {
-                self?.diePlayers = dice
-                self?.coinPlayers = coins
+    private let audioQueue = DispatchQueue(label: "com.dice.sound", qos: .utility)
+
+    #if !os(watchOS)
+    private var haptic: UIImpactFeedbackGenerator?
+    #endif
+
+    // Zero work at startup: no audio files loaded, no AVAudioSession touched, no haptics allocated.
+    init() {}
+
+    func setEnabled(_ enabled: Bool) {
+        stateLock.lock()
+        isEnabled = enabled
+        stateLock.unlock()
+
+        if enabled {
+            #if !os(watchOS)
+            if haptic == nil {
+                haptic = UIImpactFeedbackGenerator(style: .light)
+            }
+            haptic?.prepare()
+            #endif
+            loadIfNeeded()
+        } else {
+            reset()
+            audioQueue.async { [weak self] in
+                guard let self, self.isLoaded else { return }
+                for p in self.diePlayers where p.isPlaying { p.stop() }
+                for p in self.coinPlayers where p.isPlaying { p.stop() }
+                try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
             }
         }
     }
 
+    private func loadIfNeeded() {
+        audioQueue.async { [weak self] in
+            guard let self else { return }
+
+            let session = AVAudioSession.sharedInstance()
+            try? session.setCategory(.ambient, mode: .default, options: .mixWithOthers)
+            try? session.setActive(true)
+
+            guard !self.isLoaded, !self.isLoading else { return }
+            self.isLoading = true
+
+            // Smaller pool (5 dice, 3 coins) cuts memory/CPU while still covering rapid multi-dice impacts
+            let dice = Self.makePool(name: "diceSound04", count: 5)
+            let coins = Self.makePool(name: "coinSound", count: 3)
+
+            self.diePlayers = dice
+            self.coinPlayers = coins
+            self.isLoaded = true
+            self.isLoading = false
+        }
+    }
+
     private static func makePool(name: String, count: Int) -> [AVAudioPlayer] {
-        guard let url = Bundle.main.url(forResource: name, withExtension: "wav", subdirectory: "MyAssets") else { return [] }
+        // Checks "MyAssets" folder reference first, then falls back to main bundle root
+        let url = Bundle.main.url(forResource: name, withExtension: "wav", subdirectory: "MyAssets")
+               ?? Bundle.main.url(forResource: name, withExtension: "wav")
+        guard let soundURL = url, let data = try? Data(contentsOf: soundURL) else { return [] }
+
+        // Initializing from in-memory Data avoids repeated disk I/O for each player in the pool
         return (0..<count).compactMap { _ in
-            guard let p = try? AVAudioPlayer(contentsOf: url) else { return nil }
+            guard let p = try? AVAudioPlayer(data: data, fileTypeHint: AVFileType.wav.rawValue) else { return nil }
             p.enableRate = true
             p.prepareToPlay()
             return p
         }
     }
 
-    func setEnabled(_ enabled: Bool) {
-        isEnabled = enabled
-        if enabled {
-            haptic.prepare()
-            queue.async {
-                let session = AVAudioSession.sharedInstance()
-                try? session.setCategory(.ambient, options: .mixWithOthers)
-                try? session.setActive(true)
-            }
-        } else {
-            (diePlayers + coinPlayers).filter(\.isPlaying).forEach { $0.stop() }
-            reset()
-        }
+    func removeNode(_ node: SCNNode) {
+        let id = ObjectIdentifier(node)
+        stateLock.lock()
+        lastHitTime.removeValue(forKey: id)
+        stateLock.unlock()
     }
 
-    func removeNode(_ node: SCNNode) { lastHitTime.removeValue(forKey: ObjectIdentifier(node)) }
-    func reset() { lastHitTime.removeAll(); lastGlobalTime = 0 }
+    func reset() {
+        stateLock.lock()
+        lastHitTime.removeAll(keepingCapacity: true)
+        lastGlobalTime = 0
+        stateLock.unlock()
+    }
 
     func play(contact: SCNPhysicsContact, tableWidth: Float) {
+        // Fast-path exit before touching locks or geometry properties
         let impulse = Float(contact.collisionImpulse)
+        guard impulse > 0.08 else { return }
+
+        // Ignore wall hits early
+        if contact.nodeA.name?.hasPrefix("wall-") == true || contact.nodeB.name?.hasPrefix("wall-") == true {
+            return
+        }
+
         let now = ProcessInfo.processInfo.systemUptime
-        let (idA, idB) = (ObjectIdentifier(contact.nodeA), ObjectIdentifier(contact.nodeB))
+        let idA = ObjectIdentifier(contact.nodeA)
+        let idB = ObjectIdentifier(contact.nodeB)
 
-        guard isEnabled, impulse > 0.08, now - lastGlobalTime >= 0.018,
-              now - (lastHitTime[idA] ?? 0) >= 0.035, now - (lastHitTime[idB] ?? 0) >= 0.035 else { return }
-
-        let isCoin = contact.nodeA is Coin || contact.nodeB is Coin
-        guard let player = (isCoin ? coinPlayers : diePlayers).first(where: { !$0.isPlaying }) else { return }
-
+        stateLock.lock()
+        guard isEnabled,
+              now - lastGlobalTime >= 0.022,
+              now - (lastHitTime[idA] ?? 0) >= 0.04,
+              now - (lastHitTime[idB] ?? 0) >= 0.04 else {
+            stateLock.unlock()
+            return
+        }
         lastGlobalTime = now
         lastHitTime[idA] = now
         lastHitTime[idB] = now
 
-        let norm = min(1.0, (impulse - 0.08) / 4.5)
+        let shouldTriggerHaptic = impulse > 1.4 && (now - lastHapticTime > 0.12)
+        if shouldTriggerHaptic { lastHapticTime = now }
+        stateLock.unlock()
+
+        // Capture lightweight value types so SCNPhysicsContact isn't retained across threads
+        let isCoin = contact.nodeA is Coin || contact.nodeB is Coin
         let bothDice = contact.nodeA is Dice && contact.nodeB is Dice
-        let hitWall = contact.nodeA.name?.hasPrefix("wall-") == true || contact.nodeB.name?.hasPrefix("wall-") == true
-        if hitWall { return } // comment out to re-enable wall sounds
+        let contactX = contact.contactPoint.x
 
-        let baseRate: Float = bothDice ? (isCoin ? 1.15 : 1.12) : (hitWall ? 1.00 : 0.86)
-        let panX = contact.contactPoint.x / max(0.1, tableWidth * 0.5)
+        // Dispatch audio playback off SceneKit's 120Hz physics thread
+        audioQueue.async { [weak self] in
+            guard let self, self.isLoaded else { return }
 
-        player.volume = 0.04 + 0.96 * pow(norm, 0.75)
-        player.rate = baseRate * Float.random(in: 0.90...1.10)
-        player.pan = max(-0.6, min(0.6, panX * 0.6))
-        player.play()
+            let pool = isCoin ? self.coinPlayers : self.diePlayers
+            guard !pool.isEmpty else { return }
 
-        if impulse > 1.4, now - lastHapticTime > 0.12 {
-            lastHapticTime = now
-            DispatchQueue.main.async { self.haptic.impactOccurred(intensity: CGFloat(norm)) }
+            // O(1) round-robin selection with fallback scan (avoids allocating filtered arrays)
+            var chosen: AVAudioPlayer?
+            let startIdx = isCoin ? self.coinIndex : self.dieIndex
+            for offset in 0..<pool.count {
+                let idx = (startIdx + offset) % pool.count
+                if !pool[idx].isPlaying {
+                    chosen = pool[idx]
+                    if isCoin { self.coinIndex = (idx + 1) % pool.count }
+                    else { self.dieIndex = (idx + 1) % pool.count }
+                    break
+                }
+            }
+            guard let player = chosen else { return }
+
+            let norm = min(1.0, (impulse - 0.08) / 4.5)
+            let baseRate: Float = bothDice ? (isCoin ? 1.15 : 1.12) : 0.86
+            let panX = contactX / max(0.1, tableWidth * 0.5)
+
+            player.volume = 0.04 + 0.96 * pow(norm, 0.75)
+            player.rate = baseRate * Float.random(in: 0.90...1.10)
+            player.pan = max(-0.6, min(0.6, panX * 0.6))
+            player.play()
+        }
+
+        if shouldTriggerHaptic {
+            let intensity = CGFloat(min(1.0, (impulse - 0.08) / 4.5))
+            DispatchQueue.main.async { [weak self] in
+                #if os(watchOS)
+                WKInterfaceDevice.current().play(.click)
+                #else
+                self?.haptic?.impactOccurred(intensity: intensity)
+                #endif
+            }
         }
     }
 }
