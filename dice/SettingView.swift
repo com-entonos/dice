@@ -1,3 +1,4 @@
+
 //
 //  SettingView.swift
 //  dice
@@ -59,8 +60,26 @@ class SettingView : UIView, UIPickerViewDataSource, UIPickerViewDelegate, UIScro
         launchSegment.frame = CGRect(x: ctrlX + (tapWidth - launchW) / 2, y: 580, width: launchW, height: 35)
         
         let label1 = UILabel(frame: CGRect(x: dw, y: 0, width: labelW, height: 150)); label1.text = "Game:"; label1.font = .systemFont(ofSize: 18); label1.textAlignment = .right
-        let label4 = UILabel(frame: CGRect(x: ctrlX, y: 125, width: tapWidth, height: 100)); label4.text = "single tap   double tap   triple tap   long tap   pinch"
-        label4.font = .systemFont(ofSize: 13); label4.textAlignment = .center; label4.adjustsFontSizeToFitWidth = true
+        
+        let tapTitles = ["single tap", "double tap", "triple tap", "long tap", "pinch"]
+        let colW = tapWidth / CGFloat(tapTitles.count)
+        let isNarrow = colW < 68
+        let headerFontSize = min(17, max(12, colW * 0.16))
+        let headerHeight: CGFloat = isNarrow ? 34 : 22
+        let headerY: CGFloat = 165 - headerHeight - 2
+        for (i, title) in tapTitles.enumerated() {
+            let colRect = CGRect(x: ctrlX + CGFloat(i) * colW, y: headerY, width: colW, height: headerHeight).insetBy(dx: 2, dy: 0)
+            let header = UILabel(frame: colRect)
+            header.text = isNarrow ? title.replacingOccurrences(of: " ", with: "\n") : title
+            header.numberOfLines = isNarrow ? 2 : 1
+            header.lineBreakMode = .byWordWrapping
+            header.font = .systemFont(ofSize: headerFontSize, weight: .medium)
+            header.textAlignment = .center
+            header.adjustsFontSizeToFitWidth = true
+            header.minimumScaleFactor = 0.7
+            settingView.addSubview(header)
+        }
+        
         let label3 = UILabel(frame: CGRect(x: dw, y: 165, width: labelW, height: 150)); label3.text = "Die action:"; label3.font = .systemFont(ofSize: 18); label3.textAlignment = .right
         let label2 = UILabel(frame: CGRect(x: dw, y: 330, width: labelW, height: 35)); label2.text = "Dice size:"; label2.font = .systemFont(ofSize: 18); label2.textAlignment = .right
         let label7 = UILabel(frame: CGRect(x: dw, y: 380, width: labelW, height: 35)); label7.text = "Throw:"; label7.font = .systemFont(ofSize: 18); label7.textAlignment = .right
@@ -189,7 +208,6 @@ class SettingView : UIView, UIPickerViewDataSource, UIPickerViewDelegate, UIScro
         settingView.addSubview(label5)
         settingView.addSubview(label1)
         settingView.addSubview(label2)
-        settingView.addSubview(label4)
         settingView.addSubview(label3)
         settingView.addSubview(label6)
         settingView.addSubview(label7)
