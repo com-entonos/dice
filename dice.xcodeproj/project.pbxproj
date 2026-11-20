@@ -30,6 +30,7 @@
 		2C94DD8D30AFF2D30036F31C /* SceneKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2C94DD8C30AFF2D30036F31C /* SceneKit.framework */; };
 		2C94DD8F30AFF2DB0036F31C /* CoreMotion.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2C94DD8E30AFF2DB0036F31C /* CoreMotion.framework */; };
 		2C94DD9130AFF2E50036F31C /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2C94DD9030AFF2E50036F31C /* AVFoundation.framework */; };
+		2C94DD9230B02C5B0036F31C /* DiceShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C77335C30A82443008C0EEC /* DiceShortcuts.swift */; };
 		2CCE105B233D303A000E22EC /* MyAssets in Resources */ = {isa = PBXBuildFile; fileRef = 2CCE105A233D303A000E22EC /* MyAssets */; };
 		2CE74E4A233379E40098171A /* World.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CE74E49233379E40098171A /* World.swift */; };
 		2CE74E4C233694E60098171A /* HelpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CE74E4B233694E60098171A /* HelpView.swift */; };
@@ -293,6 +294,7 @@
 			files = (
 				2C94DD8730AFF2010036F31C /* WatchGameView.swift in Sources */,
 				2C94DD8830AFF2120036F31C /* Dice.swift in Sources */,
+				2C94DD9230B02C5B0036F31C /* DiceShortcuts.swift in Sources */,
 				2C94DD8930AFF21E0036F31C /* World.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
