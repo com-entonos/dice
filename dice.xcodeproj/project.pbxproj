@@ -31,6 +31,8 @@
 		2C94DD8F30AFF2DB0036F31C /* CoreMotion.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2C94DD8E30AFF2DB0036F31C /* CoreMotion.framework */; };
 		2C94DD9130AFF2E50036F31C /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2C94DD9030AFF2E50036F31C /* AVFoundation.framework */; };
 		2C94DD9230B02C5B0036F31C /* DiceShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C77335C30A82443008C0EEC /* DiceShortcuts.swift */; };
+		2C94DD9730B0FE210036F31C /* DiceRNG.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C94DD9630B0FE210036F31C /* DiceRNG.swift */; };
+		2C94DD9830B0FE210036F31C /* DiceRNG.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C94DD9630B0FE210036F31C /* DiceRNG.swift */; };
 		2CCE105B233D303A000E22EC /* MyAssets in Resources */ = {isa = PBXBuildFile; fileRef = 2CCE105A233D303A000E22EC /* MyAssets */; };
 		2CE74E4A233379E40098171A /* World.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CE74E49233379E40098171A /* World.swift */; };
 		2CE74E4C233694E60098171A /* HelpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CE74E4B233694E60098171A /* HelpView.swift */; };
@@ -84,6 +86,7 @@
 		2C94DD8C30AFF2D30036F31C /* SceneKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SceneKit.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS27.2.sdk/System/Library/Frameworks/SceneKit.framework; sourceTree = DEVELOPER_DIR; };
 		2C94DD8E30AFF2DB0036F31C /* CoreMotion.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMotion.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS27.2.sdk/System/Library/Frameworks/CoreMotion.framework; sourceTree = DEVELOPER_DIR; };
 		2C94DD9030AFF2E50036F31C /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS27.2.sdk/System/Library/Frameworks/AVFoundation.framework; sourceTree = DEVELOPER_DIR; };
+		2C94DD9630B0FE210036F31C /* DiceRNG.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiceRNG.swift; sourceTree = "<group>"; };
 		2CCE105A233D303A000E22EC /* MyAssets */ = {isa = PBXFileReference; lastKnownFileType = folder; path = MyAssets; sourceTree = "<group>"; };
 		2CE74E49233379E40098171A /* World.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = World.swift; sourceTree = "<group>"; };
 		2CE74E4B233694E60098171A /* HelpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpView.swift; sourceTree = "<group>"; };
@@ -158,6 +161,7 @@
 				2C77335A30A6571D008C0EEC /* SceneDelegate.swift */,
 				2C26BC91232DD4C800A41E81 /* GameViewController.swift */,
 				2C77335C30A82443008C0EEC /* DiceShortcuts.swift */,
+				2C94DD9630B0FE210036F31C /* DiceRNG.swift */,
 				2C26BC93232DDA7C00A41E81 /* Game.swift */,
 				2CE74E49233379E40098171A /* World.swift */,
 				2C26BC892329492000A41E81 /* HUD.swift */,
@@ -294,6 +298,7 @@
 			files = (
 				2C94DD8730AFF2010036F31C /* WatchGameView.swift in Sources */,
 				2C94DD8830AFF2120036F31C /* Dice.swift in Sources */,
+				2C94DD9830B0FE210036F31C /* DiceRNG.swift in Sources */,
 				2C94DD9230B02C5B0036F31C /* DiceShortcuts.swift in Sources */,
 				2C94DD8930AFF21E0036F31C /* World.swift in Sources */,
 			);
@@ -307,6 +312,7 @@
 				2C77335B30A6571D008C0EEC /* SceneDelegate.swift in Sources */,
 				2C26BC92232DD4C800A41E81 /* GameViewController.swift in Sources */,
 				2C77335D30A82443008C0EEC /* DiceShortcuts.swift in Sources */,
+				2C94DD9730B0FE210036F31C /* DiceRNG.swift in Sources */,
 				2C63B715234CE2C800B5528C /* DiceNumber.swift in Sources */,
 				2C897C2923399C1F00B4ECA6 /* SettingView.swift in Sources */,
 				2C8C739F2488A98600452FF9 /* Start.swift in Sources */,
