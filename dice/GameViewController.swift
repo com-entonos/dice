@@ -399,65 +399,34 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
         }
     }
 
+    /* all to get rid of imageEdgeInsets warning. sigh. */
+    private func setupHUDButton(_ button: UIButton, imageName: String, insets: UIEdgeInsets, action: Selector) {
+        let inset = UIEdgeInsets(top: -insets.top, left: -insets.left, bottom: -insets.bottom, right: -insets.right)
+        button.setImage(UIImage(named: imageName)?.withAlignmentRectInsets(inset), for: .normal)
+        button.contentVerticalAlignment = .fill
+        button.contentHorizontalAlignment = .fill
+        button.addTarget(self, action: action, for: .touchUpInside)
+        _sceneView.addSubview(button)
+    }
     func createButtons() { // create help, sound, setting and un/re/do buttons
-
-        //sound button
-        soundButton.backgroundColor = UIColor.clear
-        soundButton.setImage(UIImage(named: "mute"), for: .normal)
-        soundButton.contentVerticalAlignment = .fill; soundButton.contentHorizontalAlignment = .fill
-        soundButton.imageEdgeInsets = UIEdgeInsets(top: 0, left: 34/2, bottom: 34/2, right: 0)
-        soundButton.addTarget(self, action: #selector(toggleSound), for: .touchUpInside)
-        _sceneView.addSubview(soundButton)
-        
-        //settings button
-        settingButton.backgroundColor = UIColor.clear
-        settingButton.setImage(UIImage(named: "gear"), for: .normal)
-        settingButton.contentVerticalAlignment = .fill; settingButton.contentHorizontalAlignment = .fill
-        settingButton.imageEdgeInsets = UIEdgeInsets(top: 34/4, left: 0, bottom: 0, right: 34/4)
-        settingButton.addTarget(self, action: #selector(showSettings), for: .touchUpInside)
-        _sceneView.addSubview(settingButton)
-        
-        //history button
-        historyButton.backgroundColor = UIColor.clear
-        historyButton.setImage(UIImage(named: "receipt"), for: .normal)
-        historyButton.contentVerticalAlignment = .fill; historyButton.contentHorizontalAlignment = .fill
-        historyButton.imageEdgeInsets = UIEdgeInsets(top: 34/4, left: 0, bottom: 0, right: 34/4)
-        historyButton.addTarget(self, action: #selector(showHistory), for: .touchUpInside)
+        setupHUDButton(soundButton, imageName: "mute", insets: UIEdgeInsets(top: 0, left: 34/2, bottom: 34/2, right: 0), action: #selector(toggleSound))
+        setupHUDButton(settingButton, imageName: "gear", insets: UIEdgeInsets(top: 34/4, left: 0, bottom: 0, right: 34/4), action: #selector(showSettings))
+        setupHUDButton(historyButton, imageName: "receipt", insets: UIEdgeInsets(top: 34/4, left: 0, bottom: 0, right: 34/4), action: #selector(showHistory))
         historyButton.isEnabled = false
         historyButton.isHidden = true
-        _sceneView.addSubview(historyButton)
-        
-        //help button
-        helpButton.backgroundColor = UIColor.clear
-        helpButton.setImage(UIImage(named: "help"), for: .normal)
-        helpButton.contentVerticalAlignment = .fill; helpButton.contentHorizontalAlignment = .fill
-        helpButton.imageEdgeInsets = UIEdgeInsets(top: 34/4, left: 34/4, bottom: 0, right: 0)
-        helpButton.addTarget(self, action: #selector(showHelp), for: .touchUpInside)
-        _sceneView.addSubview(helpButton)
-        
-        //undo button
-        undoButton.backgroundColor = UIColor.clear
-        undoButton.setImage(UIImage(named: "undo"), for: .normal)
-        undoButton.contentVerticalAlignment = .fill; undoButton.contentHorizontalAlignment = .fill
-        undoButton.imageEdgeInsets = UIEdgeInsets(top: 0, left: 0, bottom: 34/4, right: 34/4)
-        undoButton.addTarget(self, action: #selector(doUndo), for: .touchUpInside)
-        _sceneView.addSubview(undoButton)
+
+        setupHUDButton(helpButton, imageName: "help", insets: UIEdgeInsets(top: 34/4, left: 34/4, bottom: 0, right: 0), action: #selector(showHelp))
+
+        setupHUDButton(undoButton, imageName: "undo", insets: UIEdgeInsets(top: 0, left: 0, bottom: 34/4, right: 34/4), action: #selector(doUndo))
         _world.undoButton = undoButton
         undoButton.isEnabled = false
         undoButton.isHidden = true
 
-        //redo button
-        redoButton.backgroundColor = UIColor.clear
-        redoButton.setImage(UIImage(named: "redo"), for: .normal)
-        redoButton.contentVerticalAlignment = .fill; redoButton.contentHorizontalAlignment = .fill
-        //redoButton.imageEdgeInsets = UIEdgeInsets(top: 34/8, left: 0, bottom: 34/8, right: 34/4)
-        redoButton.imageEdgeInsets = UIEdgeInsets(top: 0, left: 0, bottom: 34/4, right: 34/4)
-        redoButton.addTarget(self, action: #selector(doRedo), for: .touchUpInside)
-        _sceneView.addSubview(redoButton)
+        setupHUDButton(redoButton, imageName: "redo", insets: UIEdgeInsets(top: 0, left: 0, bottom: 34/4, right: 34/4), action: #selector(doRedo))
         _world.redoButton = redoButton
         redoButton.isEnabled = false
         redoButton.isHidden = true
-        
+
         toggleDieButton()
         layoutButtons()
         _sceneView.bringSubviewToFront(_game.hud!.result)
@@ -512,14 +481,10 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
     }
     
     @objc func toggleSound(sender: UIButton!){  // toggle sound
-        //print("toggle sound")
         let sound = !_game.sound
         _game.sound = sound
-        if sound {
-            soundButton.setImage(UIImage(named: "sound"), for: .normal)
-        } else {
-            soundButton.setImage(UIImage(named: "mute"), for: .normal)
-        }
+        let inset = UIEdgeInsets(top: 0, left: -34/2, bottom: -34/2, right: 0)
+        soundButton.setImage(UIImage(named: sound ? "sound" : "mute")?.withAlignmentRectInsets(inset), for: .normal)
     }
     
     @objc func doUndo(sender: UIButton!){   // Undo was pressed
