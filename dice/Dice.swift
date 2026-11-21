@@ -139,8 +139,8 @@ class Dice : SCNNode {
             var v2 = Float(0)
             var mag = Float(0)
             repeat {
-                v1 = Float.random(in: -1.0...1.0)
-                v2 = Float.random(in: -1.0...1.0)
+                v1 = DiceRNG.float(in: -1.0...1.0)
+                v2 = DiceRNG.float(in: -1.0...1.0)
                 mag = v1*v1+v2*v2
             } while mag >= 1 || mag < 1e-12
             mag = sqrt( -2 * log(mag) / mag) // ugh
@@ -156,8 +156,8 @@ class Dice : SCNNode {
 /**/
 /*
         // create a random point on unit sphere, r
-        let phi = Float.random(in: 0...( 2 * Float.pi))  // random azimuthal angle
-        let cost = Float.random(in: -1...1)     // random cos(theta)=z.r, i.e. random polar angle
+        let phi = DiceRNG.float(in: 0...( 2 * Float.pi))  // random azimuthal angle
+        let cost = DiceRNG.float(in: -1...1)     // random cos(theta)=z.r, i.e. random polar angle
         let sint = sqrt(max(0,1 - cost * cost)) // corresponding sin(theta)
         var rot = acos(cost)/2.0                // angle from z-axis to random vector, quaternoin wants 1/2 the angle
         
@@ -168,7 +168,7 @@ class Dice : SCNNode {
             m = sin(rot) * sint / sqrt(m)       //  for efficiency, also multiple by sin(rot)
         }
          // random rotation about z-axis
-        let spin = Float.random(in: 0...(Float.pi))  // random amount of rotation about z-axis before rotating to random r, quaternion wants 1/2 angle
+        let spin = DiceRNG.float(in: 0...(Float.pi))  // random amount of rotation about z-axis before rotating to random r, quaternion wants 1/2 angle
          
         // first rotate random amount around z-axis (last quqternion) and then rotate to random point on sphere (first quaternion)... we shouldn't have to normalize, but do it anyway.
         //self.simdOrientation = simd_mul(simd_quatf(ix: -m*sin(phi), iy: m*cos(phi), iz: 0, r: cos(rot)).normalized, simd_quatf(ix: 0, iy: 0, iz: sin(spin), r: cos(spin) ).normalized)
@@ -180,27 +180,27 @@ class Dice : SCNNode {
     func randomVelocity(_ vOffset: SCNVector3) {
 /*
         let m = Float(self.dieMass)             // impulse = delta p = m delta velocity
-        let force = SCNVector3(x: (vOffset.x * (1 + Float.random(in: -0.1...0.1)))*m, y: (vOffset.y * (1 + Float.random(in: -0.1...0.1)))*m, z: (vOffset.z * (1 + Float.random(in: -0.1...0.1)))*m)
+        let force = SCNVector3(x: (vOffset.x * (1 + DiceRNG.float(in: -0.1...0.1)))*m, y: (vOffset.y * (1 + DiceRNG.float(in: -0.1...0.1)))*m, z: (vOffset.z * (1 + DiceRNG.float(in: -0.1...0.1)))*m)
         self.physicsBody!.applyForce(force, asImpulse: true)
  */
-        self.physicsBody!.velocity = SCNVector3(vOffset.x * (1 + Float.random(in: -0.1...0.1)),
-                                                vOffset.y * (1 + Float.random(in: -0.1...0.1)),
-                                                vOffset.z * (1 + Float.random(in: -0.1...0.1)))
+        self.physicsBody!.velocity = SCNVector3(vOffset.x * (1 + DiceRNG.float(in: -0.1...0.1)),
+                                                vOffset.y * (1 + DiceRNG.float(in: -0.1...0.1)),
+                                                vOffset.z * (1 + DiceRNG.float(in: -0.1...0.1)))
     }
     
     func randomOmega(_ wOffset: Float) {
 
         // create random point on sphere (unit torque vector)
-        let cost = Float.random(in: -1.0...1.0)
+        let cost = DiceRNG.float(in: -1.0...1.0)
         let sint = sqrt(max(0, 1 - cost * cost))
-        let phi = Float.random(in: 0.0...(2*Float.pi))
+        let phi = DiceRNG.float(in: 0.0...(2*Float.pi))
         let n = self.simdOrientation.act(simd_float3(cos(phi)*sint, sin(phi)*sint, cost))
 /*
         let m = dieInertia  // +- moment of inertia, impluse = deta Iw = I delta w
-        let torque = SCNVector4(x: n.x * m.x, y: n.y * m.y, z: n.z * m.z, w: (wOffset * (1 + Float.random(in: -0.3...0.3))) * Float(Int.random(in: 0...1)*2-1))
+        let torque = SCNVector4(x: n.x * m.x, y: n.y * m.y, z: n.z * m.z, w: (wOffset * (1 + DiceRNG.float(in: -0.3...0.3))) * Float(DiceRNG.int(in: 0...1)*2-1))
         self.physicsBody!.applyTorque(torque, asImpulse: true)
  */
-        self.physicsBody!.angularVelocity = SCNVector4(n.x, n.y, n.z, wOffset * (1 + Float.random(in: -0.3...0.3)) * Float(Int.random(in: 0...1)*2-1))
+        self.physicsBody!.angularVelocity = SCNVector4(n.x, n.y, n.z, wOffset * (1 + DiceRNG.float(in: -0.3...0.3)) * Float(DiceRNG.int(in: 0...1)*2-1))
     }
 
     override init() {
@@ -314,11 +314,11 @@ class Coin : Dice {  // coin, 2 sided die
     }
     override func randomOmega(_ wOffset: Float) {
         
-        let phi = Float.random(in: 0.0...(2*Float.pi))
+        let phi = DiceRNG.float(in: 0.0...(2*Float.pi))
         
         // torque is applied in world coordinates, so transform from local to world
         let n = self.simdOrientation.inverse.act(SIMD3<Float>(cos(phi), 0, sin(phi)))
-        self.physicsBody!.angularVelocity = SCNVector4(n.x, n.y, n.z, 2 * wOffset * (1 + Float.random(in: -0.3...0.3)) * Float(Int.random(in: 0...1)*2-1))
+        self.physicsBody!.angularVelocity = SCNVector4(n.x, n.y, n.z, 2 * wOffset * (1 + DiceRNG.float(in: -0.3...0.3)) * Float(DiceRNG.int(in: 0...1)*2-1))
     }
     
     init(size: CGFloat) {

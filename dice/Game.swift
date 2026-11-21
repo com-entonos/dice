@@ -138,7 +138,7 @@ class Game {
         } else if dice.filter({$0.dieType == type}).count < num {
             let currentSize = world.safeSize
             for _ in 1...(num-dice.filter({$0.dieType == type}).count) {
-                world.addDie(CGPoint(x: CGFloat.random(in: 0.1...0.9) * currentSize.width, y: CGFloat.random(in: 0.1...0.9) * currentSize.height), type: type)
+                world.addDie(CGPoint(x: DiceRNG.cgFloat(in: 0.1...0.9) * currentSize.width, y: DiceRNG.cgFloat(in: 0.1...0.9) * currentSize.height), type: type)
             }
         }
         world.unselectDie(die: nil) //clear any selection or hold
@@ -193,7 +193,7 @@ class Game {
             hud!.toRoll()
             // set the direction and magnitude of throwing direction
             //let psi = Float(atan2(velOfFlick.y, velOfFlick.x))  // direction of flick
-            let psi = (speed < 1.0) ? Float.random(in: 0...(2 * Float.pi)) : Float(atan2(velOfFlick.y, velOfFlick.x))  // direction of flick
+            let psi = (speed < 1.0) ? DiceRNG.float(in: 0...(2 * Float.pi)) : Float(atan2(velOfFlick.y, velOfFlick.x))  // direction of flick
             let fvel = Float(min(2.5, max(0.5, (2.5 - 0.5) * (speed - 200) / (4000.0 - 200.0) + 0.5)))   // scale over nominal speed
             let frot = Float(min(1.0, max(0.0, angle / (2 * CGFloat.pi))))                                  // how much in rotation vs translation
             //print("fvel: \(fvel) \(frot) \(speed) \(toggle)")

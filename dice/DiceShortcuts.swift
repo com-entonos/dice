@@ -59,6 +59,17 @@ enum ShortcutLaunchMode: String, AppEnum {
     ]
 }
 
+@available(iOS 16.0, macOS 13.0, visionOS 1.0, watchOS 9.0, *)
+enum ShortcutRNGMode: String, AppEnum {
+    case systemDefault, seeded
+
+    static var typeDisplayRepresentation = TypeDisplayRepresentation(name: "RNG Mode")
+    static var caseDisplayRepresentations: [ShortcutRNGMode: DisplayRepresentation] = [
+        .systemDefault: "System Default (Hardware ChaCha20)",
+        .seeded: "Seeded (Repeatable)"
+    ]
+}
+
 // MARK: - Physics-to-Shortcuts Bridge
 
 @available(iOS 16.0, macOS 13.0, visionOS 1.0, watchOS 9.0, *)
@@ -235,8 +246,8 @@ final class DiceShortcutBridge {
 
         let tableSize = game.tableSize_
         let touchPos = CGPoint(
-            x: CGFloat.random(in: 0.25...0.75) * tableSize.width,
-            y: CGFloat.random(in: 0.25...0.75) * tableSize.height
+            x: DiceRNG.cgFloat(in: 0.25...0.75) * tableSize.width,
+            y: DiceRNG.cgFloat(in: 0.25...0.75) * tableSize.height
         )
 
         return await runAndSettle {
@@ -248,7 +259,7 @@ final class DiceShortcutBridge {
             case .swipe:
                 let speed = CGFloat(200.0 + min(1.0, max(0.0, energy)) * 3800.0)
                 let angle = CGFloat(min(1.0, max(0.0, curl)) * 2.0 * .pi)
-                let dir = CGFloat.random(in: 0...(2.0 * .pi))
+                let dir = DiceRNG.cgFloat(in: 0...(2.0 * .pi))
                 let vel = CGPoint(x: speed * cos(dir), y: speed * sin(dir))
                 game.flicked(vel, pos: touchPos, speed: speed, angle: angle, toggle)
             }
@@ -258,6 +269,32 @@ final class DiceShortcutBridge {
 }
 
 // MARK: - App Intents
+
+@available(iOS 16.0, macOS 13.0, visionOS 1.0, watchOS 9.0, *)
+struct SetDiceRNGIntent: AppIntent {
+    static var title: LocalizedStringResource = "Set Random Number Generator"
+    static var description = IntentDescription("Switches between the hardware system RNG and a repeatable seeded RNG for testing.")
+    static var openAppWhenRun: Bool = false
+
+    @available(iOS 26.0, macOS 26.0, visionOS 26.0, watchOS 26.0, *)
+    static var supportedModes: IntentModes { [.background, .foreground(.dynamic)] }
+
+    @Parameter(title: "RNG Mode", default: .systemDefault) var mode: ShortcutRNGMode
+    @Parameter(title: "Seed (for Repeatable Mode)", default: 42) var seed: Int
+
+    @MainActor
+    func perform() async throws -> some IntentResult & ReturnsValue<String> {
+        switch mode {
+        case .systemDefault:
+            DiceRNG.useSystemDefault()
+            return .result(value: "System Default (Hardware ChaCha20)")
+        case .seeded:
+            let unsignedSeed = UInt64(bitPattern: Int64(seed))
+            DiceRNG.useSeed(unsignedSeed)
+            return .result(value: "Seeded (\(seed))")
+        }
+    }
+}
 
 @available(iOS 16.0, macOS 13.0, visionOS 1.0, watchOS 9.0, *)
 struct ThrowDiceIntent: AppIntent {

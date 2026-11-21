@@ -654,12 +654,12 @@ class World: SCNScene, SCNPhysicsContactDelegate {
     
     //func randomThrow() -> SCNVector3 { return SCNVector3Zero}
     func randomThrow() -> SCNVector3 {
-        let phi = Float.random(in: 0...(2 * Float.pi))
+        let phi = DiceRNG.float(in: 0...(2 * Float.pi))
         return SCNVector3(x: 0.5 * cos(phi), y: 0, z: 0.5 * sin(phi))
     }
     
     func rollRandom (_ toggle: Bool = false) {
-        let phi = Float.random(in: 0...(2*Float.pi))
+        let phi = DiceRNG.float(in: 0...(2*Float.pi))
         roll(v: SCNVector3(x: cos(phi), y: 0, z: sin(phi)), frot: Float(1.0), pos: CGPoint(x: width/2, y: height/2), toggle)
     }
     func roll( die: Dice, _ toggle: Bool = false) { // selected one dice
@@ -667,7 +667,7 @@ class World: SCNScene, SCNPhysicsContactDelegate {
         if !dieHold.contains(die) {
             unselectDie(die: nil)
             selectDie(die)
-            let phi = Float.random(in: 0...(2*Float.pi))
+            let phi = DiceRNG.float(in: 0...(2*Float.pi))
             roll(v: SCNVector3(x: cos(phi), y: 0, z: sin(phi)), frot: Float(1.0), pos: convert(pos: die.presentation.simdPosition), toggle) // extra lateral speed or spin
         }
     }
@@ -707,7 +707,7 @@ class World: SCNScene, SCNPhysicsContactDelegate {
                 var rt = r0 + simd_float3(0, Float(Int(i/(poly+1)))*maxR*2.5 + launchHeight*scaleLH, 0) // group seven dice together, increase height for every group
                 if i % (poly+1) == 0  {
                     ri = 1.2 * die.circumR
-                    phi = Float.random(in: 0.0...(2*Float.pi))  // set initial phi for other dice
+                    phi = DiceRNG.float(in: 0.0...(2*Float.pi))  // set initial phi for other dice
                 } else {
                     rt += simd_float3((ri+size)*cos(phi+Float(i%poly)*dphi),0,(ri+size)*sin(phi+Float(i%poly)*dphi)) // not center die, put in hexagon arrangement
                 }
@@ -725,14 +725,14 @@ class World: SCNScene, SCNPhysicsContactDelegate {
                     die.simdPosition = r
                     die.simdOrientation = nO
                     die.physicsBody!.resetTransform()
-                    let rndv = SCNVector3(x: vperp*Float.random(in: -0.25...0.25), y: vperp*Float.random(in: -0.25...0.25), z: vperp*Float.random(in: -0.25...0.25)) // upto 1/8 the potential energy is random in each component (max is 3/8)
-                    let rndo = Float.random(in: -1...1) //Float.random(in: 0.25...1)*Float(Int.random(in: 0...1)*2-1)
-                    die.randomVelocity(SCNVector3(vperp * v.x * Float.random(in: 0.9...1.1) + rndv.x,
-                                                  0.1*vperp*Float.random(in: 0.9...1.1)     + rndv.y,
-                                                  vperp * v.z * Float.random(in: 0.9...1.1) + rndv.z))                  // random linear velocity
+                    let rndv = SCNVector3(x: vperp*DiceRNG.float(in: -0.25...0.25), y: vperp*DiceRNG.float(in: -0.25...0.25), z: vperp*DiceRNG.float(in: -0.25...0.25)) // upto 1/8 the potential energy is random in each component (max is 3/8)
+                    let rndo = DiceRNG.float(in: -1...1) //DiceRNG.float(in: 0.25...1)*Float(DiceRNG.int(in: 0...1)*2-1)
+                    die.randomVelocity(SCNVector3(vperp * v.x * DiceRNG.float(in: 0.9...1.1) + rndv.x,
+                                                  0.1*vperp*DiceRNG.float(in: 0.9...1.1)     + rndv.y,
+                                                  vperp * v.z * DiceRNG.float(in: 0.9...1.1) + rndv.z))                  // random linear velocity
                     let inertia = die.physicsBody?.momentOfInertia
                     let mass = Float(die.physicsBody!.mass)*2*9.8*self.launchHeight
-                    die.randomOmega((frot*Float.random(in: 0.9...1.1)+rndo)*sqrt(mass/inertia!.y)*0.5)
+                    die.randomOmega((frot*DiceRNG.float(in: 0.9...1.1)+rndo)*sqrt(mass/inertia!.y)*0.5)
                     die.physicsBody?.collisionBitMask = 3
                 }
 
@@ -775,12 +775,12 @@ class World: SCNScene, SCNPhysicsContactDelegate {
                     die.simdOrientation = nO
                     die.physicsBody?.resetTransform()
 
-                    let rndv = SCNVector3(vperp * Float.random(in: -0.25...0.25), vperp * Float.random(in: 0...0.25), vperp * Float.random(in: -0.25...0.25))
-                    die.randomVelocity(SCNVector3(vperp * v.x * Float.random(in: 0.9...1.1) + rndv.x,
-                                                  vperp * 2.5 * Float.random(in: 0.9...1.1) + rndv.y,
-                                                  vperp * v.z * Float.random(in: 0.9...1.1) + rndv.z))
+                    let rndv = SCNVector3(vperp * DiceRNG.float(in: -0.25...0.25), vperp * DiceRNG.float(in: 0...0.25), vperp * DiceRNG.float(in: -0.25...0.25))
+                    die.randomVelocity(SCNVector3(vperp * v.x * DiceRNG.float(in: 0.9...1.1) + rndv.x,
+                                                  vperp * 2.5 * DiceRNG.float(in: 0.9...1.1) + rndv.y,
+                                                  vperp * v.z * DiceRNG.float(in: 0.9...1.1) + rndv.z))
                     let mass = Float(die.physicsBody!.mass) * 2 * 9.8 * self.launchHeight
-                    die.randomOmega(max(0.25, frot) * Float.random(in: 0.8...1.4) * sqrt(mass / die.physicsBody!.momentOfInertia.y) * 0.5)
+                    die.randomOmega(max(0.25, frot) * DiceRNG.float(in: 0.8...1.4) * sqrt(mass / die.physicsBody!.momentOfInertia.y) * 0.5)
                     die.physicsBody?.collisionBitMask = 3
                 }
 
@@ -806,15 +806,15 @@ class World: SCNScene, SCNPhysicsContactDelegate {
                 let pos = die.presentation.simdPosition
                 die.simdPosition = convert(pos: convert(pos: simd_float3( pos.x, pos.y + 1.1 * die.circumR, pos.z)))
                 die.physicsBody!.resetTransform()
-                let rndv = SCNVector3(x: vperp*Float.random(in: -0.25...0.25), y: vperp*Float.random(in: 0...0.25), z: vperp*Float.random(in: -0.25...0.25))
+                let rndv = SCNVector3(x: vperp*DiceRNG.float(in: -0.25...0.25), y: vperp*DiceRNG.float(in: 0...0.25), z: vperp*DiceRNG.float(in: -0.25...0.25))
                 die.physicsBody?.type = .dynamic
                 die.physicsBody!.clearAllForces()
-                die.randomVelocity(SCNVector3(vperp * v.x * Float.random(in: 0.9...1.1) + rndv.x,
-                                              vperp * 2.5 * Float.random(in: 0.9...1.1) + rndv.y,
-                                              vperp * v.z * Float.random(in: 0.9...1.1) + rndv.z))
+                die.randomVelocity(SCNVector3(vperp * v.x * DiceRNG.float(in: 0.9...1.1) + rndv.x,
+                                              vperp * 2.5 * DiceRNG.float(in: 0.9...1.1) + rndv.y,
+                                              vperp * v.z * DiceRNG.float(in: 0.9...1.1) + rndv.z))
                 let inertia = die.physicsBody?.momentOfInertia
                 let mass = Float(die.physicsBody!.mass)*2*9.8*self.launchHeight
-                die.randomOmega((max(0.25, frot) * Float.random(in: 0.8...1.4))*sqrt(mass/inertia!.y)*0.5)
+                die.randomOmega((max(0.25, frot) * DiceRNG.float(in: 0.8...1.4))*sqrt(mass/inertia!.y)*0.5)
                 die.physicsBody?.collisionBitMask = 3
             } */
         }
@@ -1249,7 +1249,7 @@ final class DiceSoundEngine {
             let panX = contactX / max(0.1, tableWidth * 0.5)
 
             player.volume = 0.04 + 0.96 * pow(norm, 0.75)
-            player.rate = baseRate * Float.random(in: 0.90...1.10)
+            player.rate = baseRate * DiceRNG.float(in: 0.90...1.10)
             player.pan = max(-0.6, min(0.6, panX * 0.6))
             player.play()
         }

@@ -121,8 +121,8 @@ final class WatchDiceController: ObservableObject {
             selectedType = type
             if let idx = DieType.allCases.firstIndex(of: type) { crownIndex = Double(idx) }
             let pos = CGPoint(
-                x: CGFloat.random(in: 0.25...0.75) * tableSize.width,
-                y: CGFloat.random(in: 0.25...0.75) * tableSize.height
+                x: DiceRNG.cgFloat(in: 0.25...0.75) * tableSize.width,
+                y: DiceRNG.cgFloat(in: 0.25...0.75) * tableSize.height
             )
             world.addDie(pos, type: type)
         } else if delta < 0 {
@@ -161,8 +161,8 @@ final class WatchDiceController: ObservableObject {
         world.dice.forEach { world.destroyDie($0) }
         for _ in 0..<dieCount {
             let pos = CGPoint(
-                x: CGFloat.random(in: 0.25...0.75) * tableSize.width,
-                y: CGFloat.random(in: 0.25...0.75) * tableSize.height
+                x: DiceRNG.cgFloat(in: 0.25...0.75) * tableSize.width,
+                y: DiceRNG.cgFloat(in: 0.25...0.75) * tableSize.height
             )
             world.addDie(pos, type: type)
         }
@@ -315,6 +315,7 @@ final class WatchDiceController: ObservableObject {
                 Task { @MainActor [weak self] in
                     guard let self, self.shakeToRoll, now - self.lastShakeTime > 1.0, !self.isRolling else { return }
                     self.lastShakeTime = now
+                    DiceRNG.useSystemDefault()
                     self.rollDice()
                 }
             }
@@ -464,10 +465,12 @@ struct WatchGameView: View {
                     .ignoresSafeArea()
                     .contentShape(Rectangle())
                     .onTapGesture(count: 2) { location in
+                        DiceRNG.useSystemDefault()
                         controller.handleDoubleTap(at: location)
                         isCrownFocused = true
                     }
                     .onTapGesture(count: 1) { location in
+                        DiceRNG.useSystemDefault()
                         controller.handleTap(at: location)
                         isCrownFocused = true
                     }

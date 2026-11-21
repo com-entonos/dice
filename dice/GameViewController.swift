@@ -262,6 +262,7 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
     }
     
     @objc func handleDoubleTap(_ gestureRecognize: UIGestureRecognizer) { // handle double tap
+        DiceRNG.useSystemDefault()
         if gestureRecognize.state == .ended {
             let pos = gestureRecognize.location(in: _sceneView) //CGPoint
             let hits = _sceneView.hitTest(pos, options: nil)
@@ -332,6 +333,7 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
         }
     }
     @objc func handleFlick(_ gestureRecognize: UIPanGestureRecognizer,_ pos: CGPoint) { // handle flicking
+        DiceRNG.useSystemDefault()
         if gestureRecognize.state == .ended && movingDie == nil {  // done with swipe
             toggle = toggle || gestureRecognize.numberOfTouches > 1
             trackSwipe(v: gestureRecognize.velocity(in: _sceneView), R: gestureRecognize.location(in: _sceneView))
@@ -385,6 +387,7 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
     }
     
     @objc func handleTap(_ gestureRecognize: UIGestureRecognizer) { // handle single tap
+        DiceRNG.useSystemDefault()
         if gestureRecognize.state == .ended {
             let pos = gestureRecognize.location(in: _sceneView) //CGPoint
             let hits = _sceneView.hitTest(pos, options: nil)
@@ -599,6 +602,7 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
         }
     }
     @objc func donePressed(sender: UIButton!){  // generic dismissal of a view (help, setting, # of dice
+        DiceRNG.useSystemDefault()
         if helpDetailView != nil { helpDetailView!.removeFromSuperview()}; helpDetailView = nil  // dismiss help
         if helpView != nil { helpView!.removeFromSuperview()}; helpView = nil  // dismiss help
         if startView != nil {
