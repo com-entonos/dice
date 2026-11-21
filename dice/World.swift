@@ -700,7 +700,7 @@ class World: SCNScene, SCNPhysicsContactDelegate {
         var ri = Float(0)
         
         if (_launchType == .gather && !toggle) || (_launchType == .scatter && toggle) {
-            for die in dieSelection.shuffled() {  // shuffle dice
+            for die in DiceRNG.shuffled(dieSelection) {  // shuffle dice
                 i += 1
                 let nO = die.randomOrientation()    // random starting orientation
                 let size = 1.2 * die.circumR
@@ -764,7 +764,7 @@ class World: SCNScene, SCNPhysicsContactDelegate {
                 targets[ObjectIdentifier(die)] = r
             }
 
-            for die in dieSelection {
+            for die in DiceRNG.shuffled(dieSelection) {
                 let (nO, q0, pos) = (die.randomOrientation(), die.safeOr, die.safePos)
                 let r = targets[ObjectIdentifier(die)]!
 
@@ -801,7 +801,7 @@ class World: SCNScene, SCNPhysicsContactDelegate {
 
             }
             /* old way
-            for die in dieSelection.shuffled() {
+            for die in DiceRNG.shuffled(dieSelection) {
                 die.simdOrientation = die.presentation.simdOrientation
                 let pos = die.presentation.simdPosition
                 die.simdPosition = convert(pos: convert(pos: simd_float3( pos.x, pos.y + 1.1 * die.circumR, pos.z)))
