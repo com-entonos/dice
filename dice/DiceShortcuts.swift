@@ -300,10 +300,10 @@ struct SetDiceRNGIntent: AppIntent {
 struct ThrowDiceIntent: AppIntent {
     static var title: LocalizedStringResource = "Throw Dice"
     static var description = IntentDescription("Throws the active dice on the table using a tap or swipe gesture.")
-    static var openAppWhenRun: Bool = false
+    static var openAppWhenRun: Bool = true
 
     @available(iOS 26.0, macOS 26.0, visionOS 26.0, watchOS 26.0, *)
-    static var supportedModes: IntentModes { [.background, .foreground(.dynamic)] }
+    static var supportedModes: IntentModes { [.foreground(.immediate)] }
 
     @Parameter(title: "Method", default: .swipe) var method: ShortcutThrowMethod
     @Parameter(title: "Swipe Speed (0 = Gentle, 1 = Fast)", default: 0.0, controlStyle: .slider, inclusiveRange: (0.0, 1.0)) var energy: Double
@@ -326,10 +326,10 @@ struct ThrowDiceIntent: AppIntent {
 struct ReplaceDiceIntent: AppIntent {
     static var title: LocalizedStringResource = "Set Dice on Table"
     static var description = IntentDescription("Replaces all dice on the table with a specific type and count.")
-    static var openAppWhenRun: Bool = false
+    static var openAppWhenRun: Bool = true
 
     @available(iOS 26.0, macOS 26.0, visionOS 26.0, watchOS 26.0, *)
-    static var supportedModes: IntentModes { [.background, .foreground(.dynamic)] }
+    static var supportedModes: IntentModes { [.foreground(.immediate)] }
 
     @Parameter(title: "Die Type", default: .d6) var dieType: ShortcutDieType
     @Parameter(title: "Count", default: 2, inclusiveRange: (1, 100)) var count: Int
@@ -363,10 +363,10 @@ struct ReplaceDiceIntent: AppIntent {
 struct AddDiceIntent: AppIntent {
     static var title: LocalizedStringResource = "Add Dice to Table"
     static var description = IntentDescription("Adds more dice of a chosen type to the existing dice on the table.")
-    static var openAppWhenRun: Bool = false
+    static var openAppWhenRun: Bool = true
 
     @available(iOS 26.0, macOS 26.0, visionOS 26.0, watchOS 26.0, *)
-    static var supportedModes: IntentModes { [.background, .foreground(.dynamic)] }
+    static var supportedModes: IntentModes { [.foreground(.immediate)] }
 
     @Parameter(title: "Die Type", default: .d6) var dieType: ShortcutDieType
     @Parameter(title: "Count", default: 1, inclusiveRange: (1, 50)) var count: Int
@@ -393,10 +393,10 @@ struct AddDiceIntent: AppIntent {
 struct UndoRollIntent: AppIntent {
     static var title: LocalizedStringResource = "Undo Roll"
     static var description = IntentDescription("Reverts the dice on the table to their previous roll.")
-    static var openAppWhenRun: Bool = false
+    static var openAppWhenRun: Bool = true
 
     @available(iOS 26.0, macOS 26.0, visionOS 26.0, watchOS 26.0, *)
-    static var supportedModes: IntentModes { [.background, .foreground(.dynamic)] }
+    static var supportedModes: IntentModes { [.foreground(.immediate)] }
 
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<[Int]> {
@@ -416,10 +416,10 @@ struct UndoRollIntent: AppIntent {
 struct RedoRollIntent: AppIntent {
     static var title: LocalizedStringResource = "Redo Roll"
     static var description = IntentDescription("Restores the previously undone dice roll.")
-    static var openAppWhenRun: Bool = false
+    static var openAppWhenRun: Bool = true
 
     @available(iOS 26.0, macOS 26.0, visionOS 26.0, watchOS 26.0, *)
-    static var supportedModes: IntentModes { [.background, .foreground(.dynamic)] }
+    static var supportedModes: IntentModes { [.foreground(.immediate)] }
 
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<[Int]> {
@@ -439,10 +439,10 @@ struct RedoRollIntent: AppIntent {
 struct GetDiceResultsIntent: AppIntent {
     static var title: LocalizedStringResource = "Get Dice Results"
     static var description = IntentDescription("Reads the current face-up values of all dice on the table.")
-    static var openAppWhenRun: Bool = false
+    static var openAppWhenRun: Bool = true
 
     @available(iOS 26.0, macOS 26.0, visionOS 26.0, watchOS 26.0, *)
-    static var supportedModes: IntentModes { [.background, .foreground(.dynamic)] }
+    static var supportedModes: IntentModes { [.foreground(.immediate)] }
 
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<[Int]> {
