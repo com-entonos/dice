@@ -99,6 +99,24 @@ enum DiceRNG {
         }
         return Int.random(in: range, using: &system)
     }
+    
+    // MARK: - shuffle
+    
+    static func shuffle<T>(_ array: inout [T]) {
+        lock.lock()
+        defer { lock.unlock() }
+        if seeded != nil {
+            array.shuffle(using: &seeded!)
+        } else {
+            array.shuffle(using: &system)
+        }
+    }
+    static func shuffled<T>(_ array: [T]) -> [T] {
+        var copy = array
+        shuffle(&copy)
+        return copy
+    }
+
 }
 
 // MARK: - Deterministic Seeded Stream
